@@ -1,0 +1,36 @@
+datasource db {
+  provider = "postgresql"
+}
+generator client {
+  provider = "prisma-client-js"
+}
+model LiturgicalPlan {
+  id        String       @id @default(cuid())
+  title     String       // e.g., "30th Sunday in Ordinary Time (Year B)"
+  date      DateTime     // Date of the Mass/Service
+  notes     String?      // Director's instructions
+  owner     String       @default("st-cecilia@parish.org") // Identifies who owns/created this plan
+  songs     PlanSong[]   // Songs selected for this service
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+model MediaItem {
+  id        String     @id @default(cuid())
+  title     String     // Song title
+  composer  String?    // Composer / Arranger
+  category  String     // e.g., HYMN, PSALM, MASS_SETTING
+  fileUrl   String?    // PDF or Audio link
+  planSongs PlanSong[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PlanSong {
+  id           String         @id @default(cuid())
+  planId       String
+  plan         LiturgicalPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  mediaItemId  String
+  mediaItem    MediaItem      @relation(fields: [mediaItemId], references: [id], onDelete: Cascade)
+  massPart     String         // ENTRANCE, OFFERTORY, COMMUNION, RECESSIONAL, etc.
+  order        Int            @default(0) // Sequence order
+}
