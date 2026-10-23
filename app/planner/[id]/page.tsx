@@ -93,9 +93,9 @@ export default async function PublicPlanPage({ params }: PageProps) {
 
         {plan.songs && plan.songs.length > 0 ? (
           <div className="space-y-4">
-            {plan.songs.map((song, index) => (
+            {plan.songs.map((song: any, index: number) => (
               <div
-                key={song.id}
+                key={song.id || index}
                 className="bg-[#FDFBF7] p-4 rounded-sm border border-amber-900/15 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2"
               >
                 <div>
