@@ -8,7 +8,7 @@ export async function GET() {
     });
     return NextResponse.json(items);
   } catch (error) {
-    console.error("Database connection error:", error);
+    console.error("Database connection error during build/runtime:", error);
     return NextResponse.json([], { status: 200 });
   }
 }

@@ -4,7 +4,6 @@ import { Pool } from "pg";
 
 const connectionString = process.env.DATABASE_URL;
 
-// Added ssl configuration for remote/Supabase connections
 const pool = new Pool({
   connectionString,
   ssl: { rejectUnauthorized: false },
