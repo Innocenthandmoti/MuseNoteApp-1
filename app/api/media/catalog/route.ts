@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// Force dynamic execution so Next.js never tries to pre-render this during build
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const items = await prisma.mediaItem.findMany({
@@ -12,7 +9,6 @@ export async function GET() {
     return NextResponse.json(items);
   } catch (error) {
     console.error("Database connection error:", error);
-    // Return empty array gracefully during build or connection hiccups
     return NextResponse.json([], { status: 200 });
   }
 }
