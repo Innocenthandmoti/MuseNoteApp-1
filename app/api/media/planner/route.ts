@@ -1,29 +1,37 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const connectionString = process.env.DATABASE_URL;
-const adapter = new PrismaPg({ connectionString });
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+import { supabase } from "@/lib/supabase"; // Adjust path to your supabase client helper if needed
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const owner = searchParams.get("owner");
 
   try {
-    const plans = await prisma.liturgicalPlan.findMany({
-      where: owner ? { notes: { contains: owner } } : undefined, // fallback storage filter if owner column isn't migrated
-      include: {
-        songs: {
-          include: { mediaItem: true },
-        },
-      },
-      orderBy: { date: "desc" },
-    });
-    return NextResponse.json(plans);
+    // Build query to fetch liturgical plans with nested songs and media items
+    let query = supabase
+      .from("LiturgicalPlan")
+      .select(
+        `
+        *,
+        songs:PlanSong (
+          *,
+          mediaItem:MediaItem (*)
+        )
+      `,
+      )
+      .order("date", { ascending: false });
+
+    // Fallback storage filter if owner is specified
+    if (owner) {
+      query = query.ilike("notes", `%${owner}%`);
+    }
+
+    const { data: plans, error } = await query;
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json(plans || []);
   } catch (error: any) {
     console.error("GET Plans Error:", error);
     return NextResponse.json(
@@ -47,18 +55,28 @@ export async function POST(request: Request) {
       ? `[Workspace: ${owner}] ${notes || ""}`
       : notes;
 
-    const newPlan = await prisma.liturgicalPlan.create({
-      data: {
+    // Insert the new plan into Supabase
+    const { data: newPlan, error } = await supabase
+      .from("LiturgicalPlan")
+      .insert({
         title,
-        date: date ? new Date(date) : new Date(),
+        date: date ? new Date(date).toISOString() : new Date().toISOString(),
         notes: formattedNotes,
-      },
-      include: {
-        songs: {
-          include: { mediaItem: true },
-        },
-      },
-    });
+      })
+      .select(
+        `
+        *,
+        songs:PlanSong (
+          *,
+          mediaItem:MediaItem (*)
+        )
+      `,
+      )
+      .single();
+
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(newPlan, { status: 201 });
   } catch (error: any) {
@@ -77,7 +95,15 @@ export async function DELETE(request: Request) {
   if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
   try {
-    await prisma.liturgicalPlan.delete({ where: { id } });
+    const { error } = await supabase
+      .from("LiturgicalPlan")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      throw error;
+    }
+
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("DELETE Plan Error:", error);

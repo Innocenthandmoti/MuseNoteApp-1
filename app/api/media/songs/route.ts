@@ -1,29 +1,32 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-
-const connectionString = process.env.DATABASE_URL;
-const adapter = new PrismaPg({ connectionString });
-
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
-const prisma = globalForPrisma.prisma || new PrismaClient({ adapter });
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+import { supabase } from "@/lib/supabase"; // Adjust path to your supabase client helper if needed
 
 export async function POST(request: Request) {
   try {
     const { planId, mediaItemId, massPart } = await request.json();
 
-    const planSong = await prisma.planSong.create({
-      data: {
+    const { data: planSong, error } = await supabase
+      .from("PlanSong")
+      .insert({
         planId,
         mediaItemId,
         massPart,
-      },
-      include: { mediaItem: true },
-    });
+      })
+      .select(
+        `
+        *,
+        mediaItem:MediaItem (*)
+      `,
+      )
+      .single();
+
+    if (error) {
+      throw error;
+    }
 
     return NextResponse.json(planSong, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("Assign Song Error:", error);
     return NextResponse.json(
       { error: "Failed to assign song" },
       { status: 500 },
