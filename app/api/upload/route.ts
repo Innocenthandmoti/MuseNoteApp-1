@@ -1,14 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
-
-// Initialize Supabase client directly
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
 
 export async function POST(request: Request) {
   try {
@@ -45,7 +38,7 @@ export async function POST(request: Request) {
       data: { publicUrl },
     } = supabase.storage.from("media").getPublicUrl(fileName);
 
-    // 3. Save metadata into your database table
+    // 3. Save metadata into your database table with isApproved set to false
     const { data: dbData, error: dbError } = await supabase
       .from("MediaItem")
       .insert([
@@ -54,6 +47,7 @@ export async function POST(request: Request) {
           composer: composer || "Unknown",
           category: category || "HYMN",
           fileUrl: publicUrl,
+          isApproved: false, // Requires admin approval before appearing publicly
         },
       ])
       .select();
@@ -64,7 +58,11 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { success: true, item: dbData[0] },
+      {
+        success: true,
+        message: "Score submitted successfully and is pending admin approval.",
+        item: dbData[0],
+      },
       { status: 201 },
     );
   } catch (error: any) {
