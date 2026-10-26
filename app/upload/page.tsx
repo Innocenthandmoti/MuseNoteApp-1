@@ -39,7 +39,7 @@ export default function UploadPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/media/catalog", {
+      const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
