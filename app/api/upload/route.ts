@@ -1,10 +1,46 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try {
+    // 1. Extract the Authorization bearer token sent from the client
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader ? authHeader.replace("Bearer ", "") : null;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Unauthorized: Missing authentication token." },
+        { status: 401 },
+      );
+    }
+
+    // 2. Initialize a user-scoped Supabase client using their auth token so RLS permits the insert
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      },
+    );
+
+    // Verify user is valid
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized: Invalid session." },
+        { status: 401 },
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;
@@ -15,12 +51,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Convert file to buffer for Supabase Storage
+    // Sanitize file name
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+    const originalName = file.name;
+    const lastDotIndex = originalName.lastIndexOf(".");
+    const namePart = originalName
+      .substring(0, lastDotIndex)
+      .replace(/[^a-zA-Z0-9]/g, "_");
+    const extPart = originalName.substring(lastDotIndex).toLowerCase();
+    const fileName = `${Date.now()}-${namePart}${extPart}`;
 
-    // 1. Upload file to Supabase Storage bucket named 'media'
+    // 3. Upload file to Supabase storage bucket ('media') using user-scoped client
     const { error: uploadError } = await supabase.storage
       .from("media")
       .upload(fileName, buffer, {
@@ -33,12 +75,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // 2. Get public URL of the file
+    // 4. Get public URL
     const {
       data: { publicUrl },
     } = supabase.storage.from("media").getPublicUrl(fileName);
 
-    // 3. Save metadata into your database table with isApproved set to false
+    // 5. Insert database row with isApproved: false (Pending admin review)
     const { data: dbData, error: dbError } = await supabase
       .from("MediaItem")
       .insert([
@@ -47,7 +89,7 @@ export async function POST(request: Request) {
           composer: composer || "Unknown",
           category: category || "HYMN",
           fileUrl: publicUrl,
-          isApproved: false, // Requires admin approval before appearing publicly
+          isApproved: false, // Hidden from public catalog until admin approves
         },
       ])
       .select();

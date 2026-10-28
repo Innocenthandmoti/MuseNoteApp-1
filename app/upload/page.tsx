@@ -1,25 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export default function UploadPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [category, setCategory] = useState("HYMN");
   const [season, setSeason] = useState("Ordinary Time");
   const [role, setRole] = useState("Entrance Hymn");
-
-  const [fileUrl, setFileUrl] = useState("");
   const [fileName, setFileName] = useState("");
-
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-
   const [loading, setLoading] = useState(false);
+  const [userChecked, setUserChecked] = useState(false);
 
-  // Handle local PDF file selection and create a secure object URL for viewing/downloading
+  // Protect route: Ensure user is logged in, otherwise redirect to login/register
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        alert("You must log in or register before uploading a sacred score.");
+        router.push("/login"); // Change to your login/auth route path if different
+      } else {
+        setUserChecked(true);
+      }
+    });
+  }, [router]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -28,8 +39,6 @@ export default function UploadPage() {
         return;
       }
       setFileName(file.name);
-      const objectUrl = URL.createObjectURL(file);
-      setFileUrl(objectUrl);
     }
   };
 
@@ -38,29 +47,45 @@ export default function UploadPage() {
     if (!title.trim()) return;
 
     setLoading(true);
+
     try {
-      const res = await fetch("/api/media/catalog", {
+      // Get the active session token
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("Your session has expired. Please log in again.");
+      }
+
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("composer", composer);
+      formData.append("category", category);
+      formData.append("season", season);
+      formData.append("role", role);
+      if (audioUrl) formData.append("audioUrl", audioUrl);
+      if (videoUrl) formData.append("videoUrl", videoUrl);
+
+      if (fileInputRef.current?.files?.[0]) {
+        formData.append("file", fileInputRef.current.files[0]);
+      }
+
+      // Send the token in the Authorization header
+      const res = await fetch("/api/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          composer: composer || "Traditional / Anonymous",
-          category,
-          season,
-          role,
-          fileUrl:
-            fileUrl ||
-            "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
-          audioUrl: audioUrl.trim() || null,
-          videoUrl: videoUrl.trim() || null,
-        }),
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: formData,
       });
 
-      if (!res.ok) throw new Error("Failed to upload composition");
+      const data = await res.json();
 
-      alert(
-        "Sacred score successfully uploaded and cataloged with media indicators!",
-      );
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload composition");
+      }
+
+      alert("Score submitted successfully! It is now pending admin approval.");
       router.push("/hymns");
     } catch (err: any) {
       alert(`Error: ${err.message}`);
@@ -68,6 +93,14 @@ export default function UploadPage() {
       setLoading(false);
     }
   };
+
+  if (!userChecked) {
+    return (
+      <div className="text-center py-20 text-stone-600">
+        Verifying session...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-6">
@@ -80,7 +113,7 @@ export default function UploadPage() {
         </h1>
         <p className="text-stone-600 text-sm italic mt-1">
           Upload PDF sheet music from your device, assign exact liturgical
-          roles, seasons, and optional audio/video recordings.
+          roles, and submit for editorial review.
         </p>
       </div>
 
@@ -88,7 +121,6 @@ export default function UploadPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-md border border-amber-900/20 shadow-sm space-y-6"
       >
-        {/* Title */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
             Composition Title *
@@ -103,21 +135,19 @@ export default function UploadPage() {
           />
         </div>
 
-        {/* Composer */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
             Composer / Source
           </label>
           <input
             type="text"
-            placeholder="e.g., Wolfgang Amadeus Mozart or Gregorian Chant"
+            placeholder="e.g., Mozart or Gregorian Chant"
             value={composer}
             onChange={(e) => setComposer(e.target.value)}
             className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
           />
         </div>
 
-        {/* Category & Season Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
@@ -156,81 +186,15 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Exact Liturgical Role / Mass Part */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Primary Liturgical Role / Mass Part
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-          >
-            <option value="Entrance Hymn">Entrance Hymn</option>
-            <option value="Kyrie / Penitential">Kyrie / Penitential</option>
-            <option value="Gloria">Gloria</option>
-            <option value="Responsorial Psalm">Responsorial Psalm</option>
-            <option value="Gospel Acclamation">Gospel Acclamation</option>
-            <option value="Offertory / Gifts">Offertory / Gifts</option>
-            <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
-            <option value="Memorial Acclamation">Memorial Acclamation</option>
-            <option value="Pater Noster">
-              Pater Noster (Lord&apos;s Prayer)
-            </option>
-            <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
-            <option value="Communion Hymn">Communion Hymn</option>
-            <option value="Meditation / Motet">Meditation / Motet</option>
-            <option value="Recessional / Closing">Recessional / Closing</option>
-          </select>
-        </div>
-
-        {/* Optional Audio & Video URL Links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Audio Recording URL{" "}
-              <span className="text-[10px] lowercase text-stone-500 font-normal">
-                (optional)
-              </span>
-            </label>
-            <input
-              type="url"
-              placeholder="https://example.com/audio.mp3"
-              value={audioUrl}
-              onChange={(e) => setAudioUrl(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Video Reference URL{" "}
-              <span className="text-[10px] lowercase text-stone-500 font-normal">
-                (optional)
-              </span>
-            </label>
-            <input
-              type="url"
-              placeholder="https://youtube.com/watch?v=..."
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            />
-          </div>
-        </div>
-
-        {/* PDF Device File Upload */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Upload PDF Score from Device{" "}
-            <span className="text-[10px] lowercase text-stone-500 font-normal">
-              (optional)
-            </span>
+            Upload PDF Score from Device
           </label>
           <div className="border-2 border-dashed border-amber-900/30 rounded-sm p-6 text-center bg-[#FDFBF7] hover:bg-amber-50/40 transition">
             <input
               type="file"
               accept=".pdf"
+              ref={fileInputRef}
               onChange={handleFileChange}
               className="hidden"
               id="pdf-upload"
@@ -245,21 +209,17 @@ export default function UploadPage() {
                   ? `Selected: ${fileName}`
                   : "Click to browse device for PDF score"}
               </span>
-              <span className="text-[10px] text-stone-500 italic block">
-                PDF format up to 20MB
-              </span>
             </label>
           </div>
         </div>
 
-        {/* Submit Button */}
         <div className="pt-4 flex justify-end">
           <button
             type="submit"
             disabled={loading}
             className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-[family-name:var(--font-cinzel)] tracking-wider font-semibold px-6 py-3 rounded-sm shadow transition cursor-pointer disabled:opacity-50"
           >
-            {loading ? "Uploading Score..." : "Upload & Save to Registry"}
+            {loading ? "Uploading Score..." : "Upload & Submit for Review"}
           </button>
         </div>
       </form>
