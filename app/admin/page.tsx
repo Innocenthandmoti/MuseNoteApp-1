@@ -7,22 +7,26 @@ interface Song {
   id: string;
   title: string;
   composer: string;
+  category?: string;
   season?: string;
   role?: string;
-  category?: string;
   keySignature?: string;
   lyrics?: string;
   audioUrl?: string;
   fileUrl?: string;
   videoUrl?: string;
   isApproved: boolean;
+  createdAt?: string;
 }
 
 export default function AdminPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
-  const [editingSong, setEditingSong] = useState<Song | null>(null);
+
+  // Modals state
+  const [selectedSong, setSelectedSong] = useState<Song | null>(null); // For viewing full details
+  const [editingSong, setEditingSong] = useState<Song | null>(null); // For editing details
 
   // Fetch real songs from Supabase database
   const fetchSongs = async () => {
@@ -54,12 +58,14 @@ export default function AdminPage() {
 
       if (error) throw error;
 
-      // Update local state instantly
       setSongs((prev) =>
         prev.map((song) =>
           song.id === id ? { ...song, isApproved: true } : song,
         ),
       );
+      if (selectedSong?.id === id) {
+        setSelectedSong({ ...selectedSong, isApproved: true });
+      }
       alert("Score approved and published to the public catalog!");
     } catch (err: any) {
       alert(`Error approving score: ${err.message}`);
@@ -79,8 +85,9 @@ export default function AdminPage() {
 
         if (error) throw error;
 
-        // Update local state instantly
         setSongs((prev) => prev.filter((song) => song.id !== id));
+        setSelectedSong(null);
+        setEditingSong(null);
       } catch (err: any) {
         alert(`Error deleting score: ${err.message}`);
       }
@@ -98,6 +105,7 @@ export default function AdminPage() {
         .update({
           title: editingSong.title,
           composer: editingSong.composer,
+          category: editingSong.category,
           season: editingSong.season,
           role: editingSong.role,
           keySignature: editingSong.keySignature,
@@ -122,7 +130,6 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans selection:bg-amber-200 flex flex-col">
-      {/* Main Admin Dashboard */}
       <main className="flex-1 max-w-6xl w-full mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="border-b border-amber-900/15 pb-6 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
@@ -186,35 +193,51 @@ export default function AdminPage() {
                     <div className="space-y-2 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] font-[family-name:var(--font-cinzel)] italic text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          {song.season || "Ordinary Time"}
+                          Category: {song.category || "Hymn"}
                         </span>
                         <span className="text-[11px] font-[family-name:var(--font-cinzel)] text-stone-700 bg-stone-100 px-2 py-0.5 rounded">
-                          {song.role || song.category || "Liturgical Hymn"}
+                          Season: {song.season || "Ordinary Time"}
                         </span>
+                        {song.role && (
+                          <span className="text-[11px] font-[family-name:var(--font-cinzel)] text-stone-600 bg-stone-50 px-2 py-0.5 rounded border border-stone-200">
+                            Role: {song.role}
+                          </span>
+                        )}
                         {song.keySignature && (
                           <span className="text-[11px] font-mono text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200">
-                            {song.keySignature}
+                            Key: {song.keySignature}
                           </span>
                         )}
                       </div>
 
-                      <h3 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+                      <h3
+                        onClick={() => setSelectedSong(song)}
+                        className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 hover:text-amber-900 cursor-pointer underline"
+                      >
                         {song.title}
                       </h3>
                       <p className="text-xs font-[family-name:var(--font-cinzel)] italic text-stone-600">
                         Composer: {song.composer}
                       </p>
 
-                      {song.fileUrl && (
-                        <a
-                          href={song.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-amber-800 hover:underline font-medium inline-block pt-1"
+                      <div className="pt-2 flex items-center gap-4">
+                        {song.fileUrl && (
+                          <a
+                            href={song.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-amber-800 hover:underline font-semibold"
+                          >
+                            📄 View / Download PDF ↗
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setSelectedSong(song)}
+                          className="text-xs text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
                         >
-                          📄 View PDF Score Document ↗
-                        </a>
-                      )}
+                          🔍 View All Details
+                        </button>
+                      </div>
 
                       {song.lyrics && (
                         <p className="text-xs font-[family-name:var(--font-cinzel)] italic text-stone-500 bg-stone-50 p-3 rounded border border-stone-200 line-clamp-2 mt-2">
@@ -263,8 +286,8 @@ export default function AdminPage() {
                   <tr className="bg-stone-900 text-amber-100 font-[family-name:var(--font-cinzel)] text-xs uppercase tracking-wider">
                     <th className="py-3.5 px-4 font-normal">Title</th>
                     <th className="py-3.5 px-4 font-normal">Composer</th>
+                    <th className="py-3.5 px-4 font-normal">Category</th>
                     <th className="py-3.5 px-4 font-normal">Season</th>
-                    <th className="py-3.5 px-4 font-normal">Liturgical Role</th>
                     <th className="py-3.5 px-4 font-normal">PDF</th>
                     <th className="py-3.5 px-4 font-normal text-right">
                       Actions
@@ -277,17 +300,20 @@ export default function AdminPage() {
                       key={song.id}
                       className="hover:bg-amber-50/30 transition"
                     >
-                      <td className="py-3.5 px-4 font-bold text-stone-900">
+                      <td
+                        onClick={() => setSelectedSong(song)}
+                        className="py-3.5 px-4 font-bold text-stone-900 cursor-pointer hover:underline"
+                      >
                         {song.title}
                       </td>
                       <td className="py-3.5 px-4 text-stone-600 italic">
                         {song.composer}
                       </td>
+                      <td className="py-3.5 px-4 text-xs text-stone-700">
+                        {song.category || "Hymn"}
+                      </td>
                       <td className="py-3.5 px-4 text-xs text-amber-900">
                         {song.season || "Ordinary Time"}
-                      </td>
-                      <td className="py-3.5 px-4 text-xs text-stone-600">
-                        {song.role || song.category || "Hymn"}
                       </td>
                       <td className="py-3.5 px-4 text-xs">
                         {song.fileUrl ? (
@@ -304,6 +330,12 @@ export default function AdminPage() {
                         )}
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-3">
+                        <button
+                          onClick={() => setSelectedSong(song)}
+                          className="text-xs text-stone-700 hover:text-stone-900 cursor-pointer underline"
+                        >
+                          View
+                        </button>
                         <button
                           onClick={() => setEditingSong(song)}
                           className="text-xs text-amber-900 hover:text-amber-950 font-[family-name:var(--font-cinzel)] cursor-pointer underline"
@@ -326,7 +358,119 @@ export default function AdminPage() {
         )}
       </main>
 
-      {/* Edit Composition Modal */}
+      {/* VIEW FULL SCORE DETAILS MODAL */}
+      {selectedSong && (
+        <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-[#FDFBF7] rounded-lg border border-amber-900/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative space-y-4">
+            <div className="flex justify-between items-start border-b border-stone-200 pb-3">
+              <div>
+                <span className="text-[10px] font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded uppercase tracking-wider">
+                  {selectedSong.category || "Hymn"}
+                </span>
+                <h2 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-1">
+                  {selectedSong.title}
+                </h2>
+                <p className="text-xs italic text-stone-600">
+                  By {selectedSong.composer}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSong(null)}
+                className="text-stone-400 hover:text-stone-800 text-xl font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-amber-50/50 p-4 rounded border border-amber-200/60">
+              <div>
+                <span className="text-stone-500 font-semibold block uppercase">
+                  Season:
+                </span>
+                <span className="text-stone-900">
+                  {selectedSong.season || "Ordinary Time"}
+                </span>
+              </div>
+              <div>
+                <span className="text-stone-500 font-semibold block uppercase">
+                  Liturgical Role:
+                </span>
+                <span className="text-stone-900">
+                  {selectedSong.role || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className="text-stone-500 font-semibold block uppercase">
+                  Key Signature:
+                </span>
+                <span className="text-stone-900 font-mono">
+                  {selectedSong.keySignature || "N/A"}
+                </span>
+              </div>
+              <div>
+                <span className="text-stone-500 font-semibold block uppercase">
+                  Status:
+                </span>
+                <span
+                  className={
+                    selectedSong.isApproved
+                      ? "text-emerald-700 font-bold"
+                      : "text-amber-800 font-bold"
+                  }
+                >
+                  {selectedSong.isApproved
+                    ? "Approved / Published"
+                    : "Pending Approval"}
+                </span>
+              </div>
+            </div>
+
+            {selectedSong.lyrics && (
+              <div>
+                <h4 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
+                  Lyrics / Stanzas:
+                </h4>
+                <div className="bg-white p-4 rounded border border-stone-200 text-xs whitespace-pre-wrap italic font-[family-name:var(--font-cinzel)] text-stone-700 max-h-48 overflow-y-auto">
+                  {selectedSong.lyrics}
+                </div>
+              </div>
+            )}
+
+            {selectedSong.fileUrl && (
+              <div className="pt-2">
+                <a
+                  href={selectedSong.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-amber-900 text-amber-50 text-xs px-4 py-2 rounded shadow hover:bg-amber-950 transition font-semibold"
+                >
+                  📄 Open PDF Score Document ↗
+                </a>
+              </div>
+            )}
+
+            <div className="pt-4 border-t border-stone-200 flex justify-between items-center">
+              <button
+                onClick={() => {
+                  setEditingSong(selectedSong);
+                  setSelectedSong(null);
+                }}
+                className="text-xs text-amber-900 hover:underline font-bold cursor-pointer"
+              >
+                ✎ Edit Details
+              </button>
+              <button
+                onClick={() => setSelectedSong(null)}
+                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs rounded font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT COMPOSITION MODAL */}
       {editingSong && (
         <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
           <div className="bg-[#FDFBF7] rounded-lg border border-amber-900/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative">
@@ -381,6 +525,23 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-semibold mb-1">
+                    Category
+                  </label>
+                  <input
+                    type="text"
+                    value={editingSong.category || ""}
+                    onChange={(e) =>
+                      setEditingSong({
+                        ...editingSong,
+                        category: e.target.value,
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-stone-300 rounded text-sm font-[family-name:var(--font-cinzel)] bg-white focus:outline-hidden focus:border-amber-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-semibold mb-1">
                     Season
                   </label>
                   <select
@@ -404,59 +565,32 @@ export default function AdminPage() {
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-semibold mb-1">
                     Liturgical Role
                   </label>
-                  <select
-                    value={editingSong.role || "Entrance Hymn"}
+                  <input
+                    type="text"
+                    value={editingSong.role || ""}
                     onChange={(e) =>
                       setEditingSong({ ...editingSong, role: e.target.value })
                     }
                     className="w-full px-3 py-2 border border-stone-300 rounded text-sm font-[family-name:var(--font-cinzel)] bg-white focus:outline-hidden focus:border-amber-800"
-                  >
-                    <option value="Entrance Hymn">Entrance Hymn</option>
-                    <option value="Kyrie / Penitential">
-                      Kyrie / Penitential
-                    </option>
-                    <option value="Gloria">Gloria</option>
-                    <option value="Responsorial Psalm">
-                      Responsorial Psalm
-                    </option>
-                    <option value="Gospel Acclamation">
-                      Gospel Acclamation
-                    </option>
-                    <option value="Offertory / Gifts">Offertory / Gifts</option>
-                    <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
-                    <option value="Memorial Acclamation">
-                      Memorial Acclamation
-                    </option>
-                    <option value="Pater Noster">
-                      Pater Noster (Lord&apos;s Prayer)
-                    </option>
-                    <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
-                    <option value="Communion Hymn">Communion Hymn</option>
-                    <option value="Meditation / Motet">
-                      Meditation / Motet
-                    </option>
-                    <option value="Recessional / Closing">
-                      Recessional / Closing
-                    </option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-semibold mb-1">
-                    Key Signature
-                  </label>
-                  <input
-                    type="text"
-                    value={editingSong.keySignature || ""}
-                    onChange={(e) =>
-                      setEditingSong({
-                        ...editingSong,
-                        keySignature: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-stone-300 rounded text-sm font-[family-name:var(--font-cinzel)] focus:outline-hidden focus:border-amber-800 bg-white"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-semibold mb-1">
+                  Key Signature
+                </label>
+                <input
+                  type="text"
+                  value={editingSong.keySignature || ""}
+                  onChange={(e) =>
+                    setEditingSong({
+                      ...editingSong,
+                      keySignature: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 border border-stone-300 rounded text-sm font-[family-name:var(--font-cinzel)] focus:outline-hidden focus:border-amber-800 bg-white"
+                />
               </div>
 
               <div>
