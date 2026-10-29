@@ -361,7 +361,7 @@ export default function AdminPage() {
       {/* VIEW FULL SCORE DETAILS MODAL */}
       {selectedSong && (
         <div className="fixed inset-0 bg-stone-900/70 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#FDFBF7] rounded-lg border border-amber-900/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative space-y-4">
+          <div className="bg-[#FDFBF7] rounded-lg border border-amber-900/30 max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative space-y-5">
             <div className="flex justify-between items-start border-b border-stone-200 pb-3">
               <div>
                 <span className="text-[10px] font-semibold bg-amber-100 text-amber-900 px-2 py-0.5 rounded uppercase tracking-wider">
@@ -371,7 +371,7 @@ export default function AdminPage() {
                   {selectedSong.title}
                 </h2>
                 <p className="text-xs italic text-stone-600">
-                  By {selectedSong.composer}
+                  Composer: {selectedSong.composer || "Unknown"}
                 </p>
               </div>
               <button
@@ -382,34 +382,43 @@ export default function AdminPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-amber-50/50 p-4 rounded border border-amber-200/60">
+            {/* Comprehensive Metadata Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs bg-amber-50/60 p-4 rounded border border-amber-200/70">
               <div>
-                <span className="text-stone-500 font-semibold block uppercase">
+                <span className="text-stone-500 font-semibold block uppercase tracking-wider text-[10px]">
+                  Category:
+                </span>
+                <span className="text-stone-900 font-medium">
+                  {selectedSong.category || "Hymn"}
+                </span>
+              </div>
+              <div>
+                <span className="text-stone-500 font-semibold block uppercase tracking-wider text-[10px]">
                   Season:
                 </span>
-                <span className="text-stone-900">
+                <span className="text-stone-900 font-medium">
                   {selectedSong.season || "Ordinary Time"}
                 </span>
               </div>
               <div>
-                <span className="text-stone-500 font-semibold block uppercase">
+                <span className="text-stone-500 font-semibold block uppercase tracking-wider text-[10px]">
                   Liturgical Role:
                 </span>
-                <span className="text-stone-900">
+                <span className="text-stone-900 font-medium">
                   {selectedSong.role || "N/A"}
                 </span>
               </div>
               <div>
-                <span className="text-stone-500 font-semibold block uppercase">
+                <span className="text-stone-500 font-semibold block uppercase tracking-wider text-[10px]">
                   Key Signature:
                 </span>
-                <span className="text-stone-900 font-mono">
+                <span className="text-stone-900 font-mono font-medium">
                   {selectedSong.keySignature || "N/A"}
                 </span>
               </div>
               <div>
-                <span className="text-stone-500 font-semibold block uppercase">
-                  Status:
+                <span className="text-stone-500 font-semibold block uppercase tracking-wider text-[10px]">
+                  Moderation Status:
                 </span>
                 <span
                   className={
@@ -425,45 +434,56 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {selectedSong.lyrics && (
+            {/* Lyrics Section */}
+            {selectedSong.lyrics ? (
               <div>
-                <h4 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-1">
-                  Lyrics / Stanzas:
+                <h4 className="text-xs font-bold text-stone-700 uppercase tracking-wider mb-1 font-[family-name:var(--font-cinzel)]">
+                  Lyrics & Stanzas:
                 </h4>
-                <div className="bg-white p-4 rounded border border-stone-200 text-xs whitespace-pre-wrap italic font-[family-name:var(--font-cinzel)] text-stone-700 max-h-48 overflow-y-auto">
+                <div className="bg-white p-4 rounded border border-stone-200 text-xs whitespace-pre-wrap italic font-[family-name:var(--font-cinzel)] text-stone-700 max-h-48 overflow-y-auto shadow-inner">
                   {selectedSong.lyrics}
                 </div>
               </div>
+            ) : (
+              <div className="text-xs text-stone-400 italic bg-stone-50 p-3 rounded border border-stone-200">
+                No lyrics or stanzas provided for this composition.
+              </div>
             )}
 
-            {selectedSong.fileUrl && (
+            {/* PDF Document Link */}
+            {selectedSong.fileUrl ? (
               <div className="pt-2">
                 <a
                   href={selectedSong.fileUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-amber-900 text-amber-50 text-xs px-4 py-2 rounded shadow hover:bg-amber-950 transition font-semibold"
+                  className="inline-flex items-center gap-2 bg-amber-900 text-amber-50 text-xs px-5 py-2.5 rounded shadow hover:bg-amber-950 transition font-semibold font-[family-name:var(--font-cinzel)]"
                 >
-                  📄 Open PDF Score Document ↗
+                  📄 Download / View PDF Score Document ↗
                 </a>
+              </div>
+            ) : (
+              <div className="text-xs text-rose-600 italic">
+                No attached PDF file found for this record.
               </div>
             )}
 
+            {/* Action Footer */}
             <div className="pt-4 border-t border-stone-200 flex justify-between items-center">
               <button
                 onClick={() => {
                   setEditingSong(selectedSong);
                   setSelectedSong(null);
                 }}
-                className="text-xs text-amber-900 hover:underline font-bold cursor-pointer"
+                className="text-xs text-amber-900 hover:underline font-bold cursor-pointer font-[family-name:var(--font-cinzel)]"
               >
-                ✎ Edit Details
+                ✎ Edit Full Details
               </button>
               <button
                 onClick={() => setSelectedSong(null)}
-                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs rounded font-semibold cursor-pointer"
+                className="px-4 py-2 bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs rounded font-semibold cursor-pointer font-[family-name:var(--font-cinzel)]"
               >
-                Close
+                Close Window
               </button>
             </div>
           </div>
