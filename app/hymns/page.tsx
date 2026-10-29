@@ -10,19 +10,19 @@ interface Song {
   composer: string;
   category?: string;
   season?: string;
-  role?: string;
-  keySignature?: string;
+  audioUrl?: string;
+  videoUrl?: string;
   fileUrl?: string;
 }
 
-export default function HymnsPage() {
+export default function HymnsCatalogPage() {
   const router = useRouter();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const fetchApprovedSongs = async () => {
+    const fetchApprovedScores = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from("MediaItem")
@@ -31,14 +31,14 @@ export default function HymnsPage() {
         .order("title", { ascending: true });
 
       if (error) {
-        console.error("Error fetching hymns:", error);
+        console.error("Error fetching catalog items:", error);
       } else {
         setSongs(data || []);
       }
       setLoading(false);
     };
 
-    fetchApprovedSongs();
+    fetchApprovedScores();
   }, []);
 
   // Filter songs based on search query
@@ -48,39 +48,38 @@ export default function HymnsPage() {
       song.title?.toLowerCase().includes(query) ||
       song.composer?.toLowerCase().includes(query) ||
       song.season?.toLowerCase().includes(query) ||
-      song.role?.toLowerCase().includes(query) ||
-      song.keySignature?.toLowerCase().includes(query)
+      song.category?.toLowerCase().includes(query)
     );
   });
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* Header & Title */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-amber-900/15 pb-6">
+        {/* Header */}
+        <div className="border-b border-amber-900/20 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
-            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold uppercase tracking-widest text-amber-900 bg-amber-50 px-3 py-1 rounded border border-amber-200">
-              Public Repertoire
+            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
+              Sacred Repertoire Repository
             </span>
             <h1 className="text-3xl sm:text-4xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
-              Sacred Hymnary Catalog
+              Public Hymnary & Score Catalog
             </h1>
-            <p className="text-xs italic text-stone-600 mt-1 font-[family-name:var(--font-cinzel)]">
-              Explore approved sacred compositions, view liturgical settings,
-              and inspect scores.
+            <p className="text-stone-600 text-sm italic mt-1 font-[family-name:var(--font-cinzel)]">
+              Browse approved compositions, listen to preview audio, or inspect
+              score sheet music.
             </p>
           </div>
 
           <button
-            onClick={() => router.push("/")}
-            className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer self-start md:self-auto"
+            onClick={() => router.push("/upload")}
+            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs px-5 py-2.5 rounded font-[family-name:var(--font-cinzel)] font-semibold transition shadow-xs cursor-pointer"
           >
-            ← Return to Home
+            + Submit New Score
           </button>
         </div>
 
-        {/* Clean Neutral Search Input Bar with Custom Vector Icon */}
-        <div>
+        {/* Clean Neutral Search Input Bar */}
+        <div className="max-w-xl">
           <div className="relative">
             <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-stone-700">
               <svg
@@ -100,7 +99,7 @@ export default function HymnsPage() {
             </span>
             <input
               type="text"
-              placeholder="Search by hymn title, composer, season, or key signature..."
+              placeholder="Search by hymn title, composer, or season..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-stone-300 rounded px-4 py-2.5 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-700 focus:border-stone-700 font-sans"
@@ -125,67 +124,49 @@ export default function HymnsPage() {
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-900 border-t-transparent"></div>
           </div>
         ) : filteredSongs.length === 0 ? (
-          <div className="bg-white border border-stone-200 rounded-lg p-12 text-center">
-            <p className="italic text-stone-500 text-sm">
-              {searchQuery
-                ? "No hymns match your search criteria."
-                : "No approved hymns available in the catalog yet."}
-            </p>
+          <div className="bg-white border border-stone-200 rounded-lg p-12 text-center text-stone-500 italic">
+            No approved compositions match your search criteria.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSongs.map((song) => (
               <div
                 key={song.id}
-                className="bg-white rounded-lg border border-amber-900/20 p-6 shadow-xs hover:shadow-md hover:border-amber-800/40 transition flex flex-col justify-between space-y-4 group"
+                onClick={() => router.push(`/hymns/${song.id}`)}
+                className="bg-white rounded-lg border border-amber-900/20 p-6 shadow-xs hover:shadow-md hover:border-amber-800/40 transition cursor-pointer flex flex-col justify-between space-y-4 group"
               >
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2 py-0.5 rounded border border-amber-200">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center gap-2">
+                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded border border-amber-200">
+                      {song.category || "HYMN"}
+                    </span>
+                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
                       {song.season || "Ordinary Time"}
                     </span>
-                    {song.keySignature && (
-                      <span className="text-[10px] font-mono text-amber-900 bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200/60">
-                        {song.keySignature}
-                      </span>
-                    )}
                   </div>
 
-                  <h3 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition">
+                  <h3 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
                     {song.title}
                   </h3>
 
                   <p className="text-xs italic text-stone-600 font-[family-name:var(--font-cinzel)]">
-                    Composer:{" "}
+                    By{" "}
                     <span className="font-semibold text-stone-800">
-                      {song.composer || "Unknown"}
+                      {song.composer || "Unknown Composer"}
                     </span>
                   </p>
 
-                  {song.role && (
-                    <p className="text-[11px] text-stone-500 font-medium">
-                      Role: {song.role}
-                    </p>
+                  {(song.audioUrl || song.videoUrl) && (
+                    <div className="flex gap-2 text-[11px] text-amber-900 font-medium pt-1">
+                      {song.audioUrl && <span>🎵 Audio</span>}
+                      {song.videoUrl && <span>🎬 Video</span>}
+                    </div>
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                  <button
-                    onClick={() => router.push(`/hymns/${song.id}`)}
-                    className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs px-4 py-2 rounded font-[family-name:var(--font-cinzel)] font-semibold transition cursor-pointer"
-                  >
-                    See More / Details →
-                  </button>
-                  {song.fileUrl && (
-                    <a
-                      href={song.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-amber-800 hover:underline font-medium"
-                    >
-                      PDF ↗
-                    </a>
-                  )}
+                <div className="pt-3 border-t border-stone-100 flex justify-between items-center text-xs font-[family-name:var(--font-cinzel)] text-amber-900 font-bold">
+                  <span>View Details & Score</span>
+                  <span>→</span>
                 </div>
               </div>
             ))}

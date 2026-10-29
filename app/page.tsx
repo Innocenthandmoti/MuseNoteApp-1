@@ -10,8 +10,8 @@ interface Song {
   composer: string;
   category?: string;
   season?: string;
-  role?: string;
-  keySignature?: string;
+  audioUrl?: string;
+  videoUrl?: string;
 }
 
 export default function HomePage() {
@@ -48,8 +48,7 @@ export default function HomePage() {
       song.title?.toLowerCase().includes(query) ||
       song.composer?.toLowerCase().includes(query) ||
       song.season?.toLowerCase().includes(query) ||
-      song.role?.toLowerCase().includes(query) ||
-      song.keySignature?.toLowerCase().includes(query)
+      song.category?.toLowerCase().includes(query)
     );
   });
 
@@ -115,7 +114,7 @@ export default function HomePage() {
             </span>
             <input
               type="text"
-              placeholder="Search by hymn title, composer, season, or key signature..."
+              placeholder="Search by hymn title, composer, or season..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-stone-300 rounded-lg px-4 py-3 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-700 focus:border-stone-700 font-sans shadow-xs"
@@ -169,11 +168,9 @@ export default function HomePage() {
                       <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded-full border border-amber-200/80">
                         {song.season || "Ordinary Time"}
                       </span>
-                      {song.keySignature && (
-                        <span className="text-[10px] font-mono text-amber-900 bg-amber-100/60 px-2 py-0.5 rounded border border-amber-200">
-                          {song.keySignature}
-                        </span>
-                      )}
+                      <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
+                        {song.category || "HYMN"}
+                      </span>
                     </div>
 
                     <h3 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
@@ -187,10 +184,11 @@ export default function HomePage() {
                       </span>
                     </p>
 
-                    {song.role && (
-                      <p className="text-[11px] text-stone-500 font-medium bg-stone-50 p-2 rounded border border-stone-100">
-                        Role: {song.role}
-                      </p>
+                    {(song.audioUrl || song.videoUrl) && (
+                      <div className="flex gap-2 pt-1 text-[11px] text-amber-900 font-medium">
+                        {song.audioUrl && <span>🎵 Audio</span>}
+                        {song.videoUrl && <span>🎬 Video</span>}
+                      </div>
                     )}
                   </div>
 
@@ -210,7 +208,7 @@ export default function HomePage() {
             </h3>
             <p className="text-xs sm:text-sm text-amber-200/90 max-w-lg mx-auto font-[family-name:var(--font-cinzel)] italic">
               Access the complete repertoire catalog to filter by liturgical
-              season, category, key signature, or title.
+              season, category, or title.
             </p>
             <div>
               <button

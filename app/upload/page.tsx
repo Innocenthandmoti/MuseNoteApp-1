@@ -12,16 +12,15 @@ export default function UploadPage() {
   const [composer, setComposer] = useState("");
   const [category, setCategory] = useState("HYMN");
   const [season, setSeason] = useState("Ordinary Time");
-  const [role, setRole] = useState("Entrance Hymn");
-  const [keySignature, setKeySignature] = useState("");
-  const [lyrics, setLyrics] = useState("");
-  const [fileName, setFileName] = useState("");
+  const [role, setRole] = useState("Entrance");
+  const [customRole, setCustomRole] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [lyrics, setLyrics] = useState("");
+  const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [userChecked, setUserChecked] = useState(false);
 
-  // Protect route: Ensure user is logged in, otherwise redirect to login/register
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
@@ -51,7 +50,6 @@ export default function UploadPage() {
     setLoading(true);
 
     try {
-      // Get the active session token
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -59,23 +57,22 @@ export default function UploadPage() {
         throw new Error("Your session has expired. Please log in again.");
       }
 
+      const finalRole = role === "Other" ? customRole || "General" : role;
+
       const formData = new FormData();
       formData.append("title", title);
       formData.append("composer", composer);
       formData.append("category", category);
       formData.append("season", season);
-      formData.append("role", role);
-      formData.append("keySignature", keySignature);
-      formData.append("lyrics", lyrics);
-
+      formData.append("role", finalRole);
       if (audioUrl) formData.append("audioUrl", audioUrl);
       if (videoUrl) formData.append("videoUrl", videoUrl);
+      if (lyrics) formData.append("lyrics", lyrics);
 
       if (fileInputRef.current?.files?.[0]) {
         formData.append("file", fileInputRef.current.files[0]);
       }
 
-      // Send the token in the Authorization header
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: {
@@ -117,14 +114,15 @@ export default function UploadPage() {
           Upload Sacred Score
         </h1>
         <p className="text-stone-600 text-sm italic mt-1">
-          Upload PDF sheet music from your device, assign exact liturgical roles
-          and key signatures, and submit for editorial review.
+          Upload PDF sheet music from your device, select its liturgical
+          function, attach optional audio/video preview links, and submit for
+          review.
         </p>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-md border border-amber-900/20 shadow-sm space-y-6"
+        className="bg-white p-8 rounded-md border border-amber-900/20 shadow-xs space-y-6"
       >
         {/* Title */}
         <div>
@@ -155,7 +153,7 @@ export default function UploadPage() {
           />
         </div>
 
-        {/* Sacred Category & Liturgical Season */}
+        {/* Category & Season */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
@@ -194,43 +192,87 @@ export default function UploadPage() {
           </div>
         </div>
 
-        {/* Liturgical Role & Key Signature */}
+        {/* Liturgical Role / Part of Mass */}
+        <div>
+          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
+            Liturgical Role / Part of Mass
+          </label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+          >
+            <option value="Entrance">Entrance Hymn / Introit</option>
+            <option value="Kyrie">Kyrie (Lord Have Mercy)</option>
+            <option value="Gloria">Gloria (Glory to God)</option>
+            <option value="Responsorial Psalm">Responsorial Psalm</option>
+            <option value="Gospel Acclamation">
+              Gospel Acclamation / Alleluia
+            </option>
+            <option value="Credo">
+              Credo (I Believe / Nicene-Apostles Creed)
+            </option>
+            <option value="Prayer of the Faithful">
+              Prayer of the Faithful (Universal Prayer)
+            </option>
+            <option value="Offertory">Offertory / Presentation of Gifts</option>
+            <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
+            <option value="Mystery of Faith">
+              Mystery of Faith / Memorial Acclamation
+            </option>
+            <option value="Pater Noster">Pater Noster (Our Father)</option>
+            <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
+            <option value="Communion">Communion Processional / Hymn</option>
+            <option value="Thanksgiving">Post-Communion / Thanksgiving</option>
+            <option value="Recessional">Recessional / Dismissal</option>
+            <option value="Marian Antiphon">Marian Antiphon</option>
+            <option value="Benediction">Benediction / Adoration</option>
+            <option value="General">General / Meditation</option>
+            <option value="Other">Other (Specify below)</option>
+          </select>
+
+          {role === "Other" && (
+            <input
+              type="text"
+              required
+              placeholder="Specify part of Mass / liturgical role..."
+              value={customRole}
+              onChange={(e) => setCustomRole(e.target.value)}
+              className="mt-3 w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+            />
+          )}
+        </div>
+
+        {/* Optional Audio & Video Link Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Liturgical Role
+              Audio Link{" "}
+              <span className="text-stone-400 font-normal lowercase">
+                (optional)
+              </span>
             </label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+            <input
+              type="url"
+              placeholder="e.g., Spotify, SoundCloud, MP3 link"
+              value={audioUrl}
+              onChange={(e) => setAudioUrl(e.target.value)}
               className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            >
-              <option value="Entrance Hymn">Entrance Hymn</option>
-              <option value="Kyrie / Penitential">Kyrie / Penitential</option>
-              <option value="Gloria">Gloria</option>
-              <option value="Responsorial Psalm">Responsorial Psalm</option>
-              <option value="Gospel Acclamation">Gospel Acclamation</option>
-              <option value="Offertory / Gifts">Offertory / Gifts</option>
-              <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
-              <option value="Memorial Acclamation">Memorial Acclamation</option>
-              <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
-              <option value="Communion Hymn">Communion Hymn</option>
-              <option value="Meditation / Motet">Meditation / Motet</option>
-              <option value="Recessional / Closing">
-                Recessional / Closing
-              </option>
-            </select>
+            />
           </div>
 
           <div>
             <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Key Signature
+              Video Link{" "}
+              <span className="text-stone-400 font-normal lowercase">
+                (optional)
+              </span>
             </label>
             <input
-              type="text"
-              placeholder="e.g., G Major, F Major"
-              value={keySignature}
-              onChange={(e) => setKeySignature(e.target.value)}
+              type="url"
+              placeholder="e.g., https://youtube.com/watch?v=..."
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
               className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
             />
           </div>
@@ -239,7 +281,10 @@ export default function UploadPage() {
         {/* Lyrics & Stanzas */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Lyrics & Stanzas
+            Lyrics & Stanzas{" "}
+            <span className="text-stone-400 font-normal lowercase">
+              (optional)
+            </span>
           </label>
           <textarea
             rows={4}
@@ -283,7 +328,7 @@ export default function UploadPage() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-[family-name:var(--font-cinzel)] tracking-wider font-semibold px-6 py-3 rounded-sm shadow transition cursor-pointer disabled:opacity-50"
+            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-[family-name:var(--font-cinzel)] tracking-wider font-semibold px-6 py-3 rounded-sm shadow-xs transition cursor-pointer disabled:opacity-50"
           >
             {loading ? "Uploading Score..." : "Upload & Submit for Review"}
           </button>
