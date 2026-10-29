@@ -3,44 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
 
+// Initialize admin-level Supabase client for backend operations
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
+
 export async function POST(request: Request) {
   try {
-    // 1. Extract the Authorization bearer token sent from the client
-    const authHeader = request.headers.get("authorization");
-    const token = authHeader ? authHeader.replace("Bearer ", "") : null;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Unauthorized: Missing authentication token." },
-        { status: 401 },
-      );
-    }
-
-    // 2. Initialize a user-scoped Supabase client using their auth token so RLS permits the insert
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      },
-    );
-
-    // Verify user is valid
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return NextResponse.json(
-        { error: "Unauthorized: Invalid session." },
-        { status: 401 },
-      );
-    }
-
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;
@@ -51,9 +22,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Sanitize file name
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
+
+    // Sanitize filename
     const originalName = file.name;
     const lastDotIndex = originalName.lastIndexOf(".");
     const namePart = originalName
@@ -62,8 +34,8 @@ export async function POST(request: Request) {
     const extPart = originalName.substring(lastDotIndex).toLowerCase();
     const fileName = `${Date.now()}-${namePart}${extPart}`;
 
-    // 3. Upload file to Supabase storage bucket ('media') using user-scoped client
-    const { error: uploadError } = await supabase.storage
+    // 1. Upload file to Supabase Storage
+    const { error: uploadError } = await supabaseAdmin.storage
       .from("media")
       .upload(fileName, buffer, {
         contentType: file.type,
@@ -75,13 +47,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // 4. Get public URL
+    // 2. Get Public URL
     const {
       data: { publicUrl },
-    } = supabase.storage.from("media").getPublicUrl(fileName);
+    } = supabaseAdmin.storage.from("media").getPublicUrl(fileName);
 
-    // 5. Insert database row with isApproved: false (Pending admin review)
-    const { data: dbData, error: dbError } = await supabase
+    // 3. Insert record using service role client
+    const { data: dbData, error: dbError } = await supabaseAdmin
       .from("MediaItem")
       .insert([
         {
@@ -89,7 +61,7 @@ export async function POST(request: Request) {
           composer: composer || "Unknown",
           category: category || "HYMN",
           fileUrl: publicUrl,
-          isApproved: false, // Hidden from public catalog until admin approves
+          isApproved: false, // Default to false pending admin approval
         },
       ])
       .select();
