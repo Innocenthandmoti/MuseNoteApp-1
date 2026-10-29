@@ -17,6 +17,9 @@ export async function POST(request: Request) {
     const title = formData.get("title") as string;
     const composer = formData.get("composer") as string;
     const category = formData.get("category") as string;
+    const role = formData.get("role") as string;
+    const keySignature = formData.get("keySignature") as string;
+    const lyrics = formData.get("lyrics") as string;
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });

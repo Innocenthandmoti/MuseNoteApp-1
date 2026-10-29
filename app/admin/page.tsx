@@ -220,23 +220,24 @@ export default function AdminPage() {
                         Composer: {song.composer}
                       </p>
 
-                      <div className="pt-2 flex items-center gap-4">
+                      <div className="pt-3 flex flex-wrap items-center gap-3">
+                        <button
+                          onClick={() => setSelectedSong(song)}
+                          className="inline-flex items-center gap-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs px-3.5 py-1.5 rounded font-[family-name:var(--font-cinzel)] font-semibold transition cursor-pointer border border-amber-300"
+                        >
+                          👁️ See More (Inspect Settings & Lyrics)
+                        </button>
+
                         {song.fileUrl && (
                           <a
                             href={song.fileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-amber-800 hover:underline font-semibold"
+                            className="text-xs text-stone-600 hover:text-stone-900 underline font-medium"
                           >
-                            📄 View / Download PDF ↗
+                            📄 Download PDF File
                           </a>
                         )}
-                        <button
-                          onClick={() => setSelectedSong(song)}
-                          className="text-xs text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
-                        >
-                          🔍 View All Details
-                        </button>
                       </div>
 
                       {song.lyrics && (

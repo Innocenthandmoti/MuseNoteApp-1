@@ -13,6 +13,8 @@ export default function UploadPage() {
   const [category, setCategory] = useState("HYMN");
   const [season, setSeason] = useState("Ordinary Time");
   const [role, setRole] = useState("Entrance Hymn");
+  const [keySignature, setKeySignature] = useState("");
+  const [lyrics, setLyrics] = useState("");
   const [fileName, setFileName] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -24,7 +26,7 @@ export default function UploadPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         alert("You must log in or register before uploading a sacred score.");
-        router.push("/login"); // Change to your login/auth route path if different
+        router.push("/login");
       } else {
         setUserChecked(true);
       }
@@ -63,6 +65,9 @@ export default function UploadPage() {
       formData.append("category", category);
       formData.append("season", season);
       formData.append("role", role);
+      formData.append("keySignature", keySignature);
+      formData.append("lyrics", lyrics);
+
       if (audioUrl) formData.append("audioUrl", audioUrl);
       if (videoUrl) formData.append("videoUrl", videoUrl);
 
@@ -96,7 +101,7 @@ export default function UploadPage() {
 
   if (!userChecked) {
     return (
-      <div className="text-center py-20 text-stone-600">
+      <div className="text-center py-20 text-stone-600 font-[family-name:var(--font-cinzel)]">
         Verifying session...
       </div>
     );
@@ -112,8 +117,8 @@ export default function UploadPage() {
           Upload Sacred Score
         </h1>
         <p className="text-stone-600 text-sm italic mt-1">
-          Upload PDF sheet music from your device, assign exact liturgical
-          roles, and submit for editorial review.
+          Upload PDF sheet music from your device, assign exact liturgical roles
+          and key signatures, and submit for editorial review.
         </p>
       </div>
 
@@ -121,6 +126,7 @@ export default function UploadPage() {
         onSubmit={handleSubmit}
         className="bg-white p-8 rounded-md border border-amber-900/20 shadow-sm space-y-6"
       >
+        {/* Title */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
             Composition Title *
@@ -135,6 +141,7 @@ export default function UploadPage() {
           />
         </div>
 
+        {/* Composer */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
             Composer / Source
@@ -148,6 +155,7 @@ export default function UploadPage() {
           />
         </div>
 
+        {/* Sacred Category & Liturgical Season */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
@@ -186,6 +194,63 @@ export default function UploadPage() {
           </div>
         </div>
 
+        {/* Liturgical Role & Key Signature */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
+              Liturgical Role
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+            >
+              <option value="Entrance Hymn">Entrance Hymn</option>
+              <option value="Kyrie / Penitential">Kyrie / Penitential</option>
+              <option value="Gloria">Gloria</option>
+              <option value="Responsorial Psalm">Responsorial Psalm</option>
+              <option value="Gospel Acclamation">Gospel Acclamation</option>
+              <option value="Offertory / Gifts">Offertory / Gifts</option>
+              <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
+              <option value="Memorial Acclamation">Memorial Acclamation</option>
+              <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
+              <option value="Communion Hymn">Communion Hymn</option>
+              <option value="Meditation / Motet">Meditation / Motet</option>
+              <option value="Recessional / Closing">
+                Recessional / Closing
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
+              Key Signature
+            </label>
+            <input
+              type="text"
+              placeholder="e.g., G Major, F Major"
+              value={keySignature}
+              onChange={(e) => setKeySignature(e.target.value)}
+              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+            />
+          </div>
+        </div>
+
+        {/* Lyrics & Stanzas */}
+        <div>
+          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
+            Lyrics & Stanzas
+          </label>
+          <textarea
+            rows={4}
+            placeholder="Enter hymn verses or stanzas here..."
+            value={lyrics}
+            onChange={(e) => setLyrics(e.target.value)}
+            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+          />
+        </div>
+
+        {/* PDF File Upload */}
         <div>
           <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
             Upload PDF Score from Device
@@ -213,6 +278,7 @@ export default function UploadPage() {
           </div>
         </div>
 
+        {/* Submit Button */}
         <div className="pt-4 flex justify-end">
           <button
             type="submit"

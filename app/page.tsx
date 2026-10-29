@@ -1,198 +1,236 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
-interface MediaItem {
+interface Song {
   id: string;
   title: string;
-  composer: string | null;
-  category: string;
-  fileUrl: string | null;
+  composer: string;
+  category?: string;
+  season?: string;
+  role?: string;
+  keySignature?: string;
 }
 
 export default function HomePage() {
-  const [catalog, setCatalog] = useState<MediaItem[]>([]);
+  const router = useRouter();
+  const [latestSongs, setLatestSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeMedia, setActiveMedia] = useState<MediaItem | null>(null);
-
-  const sampleItems: MediaItem[] = [
-    {
-      id: "1",
-      title: "Panis Angelicus",
-      composer: "César Franck",
-      category: "HYMN",
-      fileUrl: "#",
-    },
-    {
-      id: "2",
-      title: "Pater Noster (Chant)",
-      composer: "Gregorian Chant",
-      category: "MASS_SETTING",
-      fileUrl: "#",
-    },
-    {
-      id: "3",
-      title: "Veni, Veni, Emmanuel",
-      composer: "Traditional",
-      category: "HYMN",
-      fileUrl: "#",
-    },
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    async function fetchCatalog() {
-      try {
-        const res = await fetch("/api/media/catalog");
-        if (res.ok) {
-          const data = await res.json();
-          setCatalog(
-            Array.isArray(data) && data.length > 0 ? data : sampleItems,
-          );
-        } else {
-          setCatalog(sampleItems);
-        }
-      } catch {
-        setCatalog(sampleItems);
-      } finally {
-        setLoading(false);
+    const fetchLatestScores = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("MediaItem")
+        .select("*")
+        .eq("isApproved", true)
+        .order("id", { ascending: false })
+        .limit(6);
+
+      if (error) {
+        console.error("Error fetching latest scores:", error);
+      } else {
+        setLatestSongs(data || []);
       }
-    }
-    fetchCatalog();
+      setLoading(false);
+    };
+
+    fetchLatestScores();
   }, []);
 
+  // Filter latest scores on homepage
+  const filteredSongs = latestSongs.filter((song) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      song.title?.toLowerCase().includes(query) ||
+      song.composer?.toLowerCase().includes(query) ||
+      song.season?.toLowerCase().includes(query) ||
+      song.role?.toLowerCase().includes(query) ||
+      song.keySignature?.toLowerCase().includes(query)
+    );
+  });
+
   return (
-    <div className="space-y-12">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-stone-900 via-stone-900 to-amber-950 text-amber-50 rounded-xl p-8 sm:p-14 shadow-xl border border-amber-900/30 relative overflow-hidden">
-        <div className="absolute right-0 bottom-0 opacity-10 text-[12rem] font-[family-name:var(--font-cinzel)] translate-x-12 translate-y-12 select-none pointer-events-none leading-none">
-          ☩
-        </div>
-        <div className="max-w-2xl relative z-10 space-y-5">
-          <div className="inline-flex items-center gap-2 bg-amber-900/80 text-amber-200 px-3.5 py-1 rounded-sm text-xs font-[family-name:var(--font-cinzel)] tracking-widest uppercase border border-amber-700/50 font-semibold">
-            <span>☩</span>
-            <span>Sacred Liturgical Repertoire</span>
+    <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans flex flex-col justify-between selection:bg-amber-200">
+      {/* Top Accent Bar */}
+      <div className="h-1.5 w-full bg-gradient-to-r from-amber-800 via-amber-600 to-amber-900" />
+
+      {/* Main Container */}
+      <main className="max-w-6xl mx-auto px-6 py-12 sm:py-16 space-y-12">
+        {/* Sacred Hero Header Section */}
+        <div className="relative text-center space-y-5 max-w-3xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-amber-50/90 border border-amber-300/60 px-4 py-1.5 rounded-full shadow-xs">
+            <span className="text-amber-800 text-xs">✨</span>
+            <span className="text-[11px] font-[family-name:var(--font-cinzel)] font-semibold uppercase tracking-widest text-amber-900">
+              Sacred Repertoire & Liturgical Music
+            </span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-[family-name:var(--font-cinzel)] font-bold tracking-tight leading-[1.15] text-amber-100">
-            Preserving the Heritage of Church Music
+
+          <h1 className="text-4xl sm:text-6xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 tracking-tight leading-tight">
+            Preserving Sacred Scores & Choral Tradition
           </h1>
-          <p className="text-stone-300 text-base sm:text-lg leading-relaxed italic">
-            Plan solemn Masses, curate pristine choral repertoires, upload
-            authorized PDF scores, and access centuries of Gregorian chant,
-            polyphony, and sacred hymnody.
+
+          <p className="text-stone-600 text-sm sm:text-base italic max-w-xl mx-auto font-[family-name:var(--font-cinzel)] leading-relaxed">
+            Discover traditional hymns, chants, and polyphonic settings. Inspect
+            detailed liturgical settings, lyrics, and download scores.
           </p>
-          <div className="pt-4 flex flex-wrap gap-4">
-            <Link
-              href="/planner"
-              className="bg-amber-800 hover:bg-amber-700 active:scale-95 text-amber-50 font-[family-name:var(--font-cinzel)] text-xs tracking-wider px-6 py-3 rounded-sm shadow transition border border-amber-600/50 font-semibold"
-            >
-              Open Liturgical Planner
-            </Link>
-            <Link
-              href="/hymns"
-              className="bg-stone-800 hover:bg-stone-700 active:scale-95 text-stone-200 font-[family-name:var(--font-cinzel)] text-xs tracking-wider px-6 py-3 rounded-sm shadow transition border border-stone-700 font-semibold"
-            >
-              Browse Hymnary Catalog
-            </Link>
-          </div>
-        </div>
-      </section>
 
-      {/* Featured Showcase Section */}
-      <section className="space-y-6">
-        <div className="border-b border-amber-900/20 pb-4 flex flex-col sm:flex-row justify-between sm:items-end gap-2">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-widest text-amber-900 font-bold">
-                Treasury Showcase
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
-              Featured Sacred Compositions
-            </h2>
-          </div>
-          <Link
-            href="/hymns"
-            className="text-xs font-[family-name:var(--font-cinzel)] tracking-wider text-amber-900 hover:text-amber-950 font-bold underline underline-offset-4"
-          >
-            View Full Catalog →
-          </Link>
-        </div>
-
-        {loading ? (
-          <div className="flex justify-center items-center py-24">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-900 border-t-transparent"></div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {catalog.slice(0, 3).map((item) => (
-              <article
-                key={item.id}
-                className="bg-white rounded-md border border-amber-900/20 shadow-sm hover:shadow-md transition p-6 flex flex-col justify-between relative group overflow-hidden"
-              >
-                <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-800"></div>
-                <div>
-                  <span className="text-[10px] font-[family-name:var(--font-cinzel)] tracking-widest uppercase text-amber-900 bg-amber-50 px-2.5 py-1 rounded-xs border border-amber-200/60 font-semibold">
-                    {item.category}
-                  </span>
-                  <h3 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-3 group-hover:text-amber-900 transition-colors">
-                    {item.title}
-                  </h3>
-                  <p className="text-sm italic text-stone-600 mt-1">
-                    {item.composer || "Traditional / Chant"}
-                  </p>
-                </div>
-
-                <div className="mt-8 pt-4 border-t border-stone-100">
-                  <button
-                    onClick={() => setActiveMedia(item)}
-                    className="w-full text-xs font-[family-name:var(--font-cinzel)] tracking-wider bg-stone-900 text-amber-50 hover:bg-amber-950 active:scale-95 py-3 rounded-sm shadow-xs transition flex items-center justify-center gap-2 cursor-pointer font-semibold"
-                  >
-                    <span>Inspect Score PDF</span>
-                    <span>→</span>
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Score Inspection Modal */}
-      {activeMedia && (
-        <div className="fixed inset-0 bg-stone-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-[#FDFBF7] rounded-lg border border-amber-900/40 max-w-lg w-full p-8 shadow-2xl relative">
+          <div className="pt-2 flex flex-wrap justify-center gap-4">
             <button
-              onClick={() => setActiveMedia(null)}
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-800 text-xl font-serif cursor-pointer"
-              aria-label="Close Modal"
+              onClick={() => router.push("/hymns")}
+              className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs sm:text-sm px-6 py-3 rounded-md font-[family-name:var(--font-cinzel)] font-bold transition shadow-md hover:shadow-lg active:scale-95 cursor-pointer"
             >
-              ✕
+              Explore Full Hymnary →
             </button>
-            <div className="text-center py-4 space-y-3">
-              <span className="text-4xl block text-amber-800 font-[family-name:var(--font-cinzel)]">
-                ☩
+            <button
+              onClick={() => router.push("/upload")}
+              className="bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 text-xs sm:text-sm px-6 py-3 rounded-md font-[family-name:var(--font-cinzel)] font-semibold transition cursor-pointer"
+            >
+              Submit a Score
+            </button>
+          </div>
+        </div>
+
+        {/* Home Page Search Bar (Clean Charcoal Vector Icon) */}
+        <div className="max-w-2xl mx-auto w-full">
+          <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-stone-700">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+            </span>
+            <input
+              type="text"
+              placeholder="Search by hymn title, composer, season, or key signature..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-stone-300 rounded-lg px-4 py-3 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-700 focus:border-stone-700 font-sans shadow-xs"
+            />
+          </div>
+        </div>
+
+        {/* Featured / Latest Scores Section */}
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-amber-900/15 pb-4 gap-2">
+            <div>
+              <span className="text-[10px] font-bold text-amber-800 uppercase tracking-widest block font-[family-name:var(--font-cinzel)]">
+                Recent Submissions
               </span>
-              <h3 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
-                {activeMedia.title}
-              </h3>
-              <p className="text-sm italic text-stone-600">
-                {activeMedia.composer}
+              <h2 className="text-2xl sm:text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+                Recently Added Compositions
+              </h2>
+            </div>
+            <button
+              onClick={() => router.push("/hymns")}
+              className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:text-amber-950 hover:underline font-bold cursor-pointer"
+            >
+              View Complete Catalog →
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center py-20">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-900 border-t-transparent"></div>
+            </div>
+          ) : filteredSongs.length === 0 ? (
+            <div className="bg-white border border-stone-200 rounded-xl p-12 text-center shadow-xs">
+              <p className="font-[family-name:var(--font-cinzel)] italic text-stone-500 text-sm">
+                {searchQuery
+                  ? "No recent compositions match your search."
+                  : "No approved compositions published yet."}
               </p>
-              <div className="pt-4">
-                <a
-                  href={activeMedia.fileUrl || "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-amber-900 text-amber-50 hover:bg-amber-950 px-6 py-3 rounded-sm text-xs font-[family-name:var(--font-cinzel)] tracking-wider shadow inline-block transition active:scale-95 font-semibold"
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredSongs.map((song) => (
+                <div
+                  key={song.id}
+                  onClick={() => router.push(`/hymns/${song.id}`)}
+                  className="bg-white rounded-xl border border-amber-900/20 p-6 shadow-xs hover:shadow-xl hover:border-amber-800/50 hover:-translate-y-1 transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-5 group relative overflow-hidden"
                 >
-                  Download / View PDF Score
-                </a>
-              </div>
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-amber-900/10 group-hover:bg-amber-800 transition" />
+
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded-full border border-amber-200/80">
+                        {song.season || "Ordinary Time"}
+                      </span>
+                      {song.keySignature && (
+                        <span className="text-[10px] font-mono text-amber-900 bg-amber-100/60 px-2 py-0.5 rounded border border-amber-200">
+                          {song.keySignature}
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
+                      {song.title}
+                    </h3>
+
+                    <p className="text-xs italic text-stone-600 font-[family-name:var(--font-cinzel)]">
+                      By{" "}
+                      <span className="font-semibold text-stone-800">
+                        {song.composer || "Unknown Composer"}
+                      </span>
+                    </p>
+
+                    {song.role && (
+                      <p className="text-[11px] text-stone-500 font-medium bg-stone-50 p-2 rounded border border-stone-100">
+                        Role: {song.role}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-[family-name:var(--font-cinzel)] font-bold text-amber-900 group-hover:translate-x-0.5 transition">
+                    <span>Inspect Score & Details</span>
+                    <span className="text-base">→</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Catalog Banner Call-to-Action */}
+          <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-amber-50 rounded-2xl p-8 sm:p-10 shadow-lg text-center space-y-4">
+            <h3 className="text-2xl sm:text-3xl font-[family-name:var(--font-cinzel)] font-bold tracking-wide">
+              Looking for a Specific Hymn or Setting?
+            </h3>
+            <p className="text-xs sm:text-sm text-amber-200/90 max-w-lg mx-auto font-[family-name:var(--font-cinzel)] italic">
+              Access the complete repertoire catalog to filter by liturgical
+              season, category, key signature, or title.
+            </p>
+            <div>
+              <button
+                onClick={() => router.push("/hymns")}
+                className="bg-amber-100 hover:bg-white text-amber-950 text-xs sm:text-sm px-6 py-3 rounded-md font-[family-name:var(--font-cinzel)] font-bold transition shadow cursor-pointer active:scale-95"
+              >
+                Browse Full Public Catalog →
+              </button>
             </div>
           </div>
         </div>
-      )}
+      </main>
+
+      {/* Footer */}
+      <footer className="border-t border-amber-900/10 py-8 text-center text-xs text-stone-500 font-[family-name:var(--font-cinzel)] space-y-1">
+        <p>
+          &copy; {new Date().getFullYear()} MuseNote. Dedicated to sacred music
+          & liturgical repertoire.
+        </p>
+      </footer>
     </div>
   );
 }
