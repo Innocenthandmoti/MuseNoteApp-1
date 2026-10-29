@@ -1,103 +1,120 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 interface Song {
   id: string;
   title: string;
   composer: string;
-  season: string;
+  season?: string;
   role?: string;
-  keySignature: string;
+  category?: string;
+  keySignature?: string;
   lyrics?: string;
   audioUrl?: string;
-  sheetMusicUrl?: string;
+  fileUrl?: string;
   videoUrl?: string;
   isApproved: boolean;
 }
 
 export default function AdminPage() {
-  const pathname = usePathname();
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
   const [editingSong, setEditingSong] = useState<Song | null>(null);
 
-  const initialData: Song[] = [
-    {
-      id: "pending-1",
-      title: "Missa de Angelis (Gloria)",
-      composer: "Gregorian Chant",
-      season: "Ordinary Time",
-      role: "Gloria",
-      keySignature: "Mode V",
-      lyrics:
-        "Gloria in excelsis Deo, et in terra pax hominibus bonae voluntatis...",
-      sheetMusicUrl: "https://example.com/score.pdf",
-      audioUrl: "https://example.com/audio.mp3",
-      isApproved: false,
-    },
-    {
-      id: "pending-2",
-      title: "Tantum Ergo Sacramentum",
-      composer: "St. Thomas Aquinas",
-      season: "Ordinary Time",
-      role: "Meditation / Motet",
-      keySignature: "F Major",
-      lyrics: "Tantum ergo Sacramentum veneremur cernui...",
-      isApproved: false,
-    },
-    {
-      id: "approved-1",
-      title: "Panis Angelicus",
-      composer: "César Franck",
-      season: "Ordinary Time",
-      role: "Communion Hymn",
-      keySignature: "A Major",
-      isApproved: true,
-    },
-    {
-      id: "approved-2",
-      title: "Veni, Veni, Emmanuel",
-      composer: "Traditional Chant",
-      season: "Advent",
-      role: "Entrance Hymn",
-      keySignature: "E Minor",
-      isApproved: true,
-    },
-  ];
+  // Fetch real songs from Supabase database
+  const fetchSongs = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("MediaItem")
+      .select("*")
+      .order("id", { ascending: false });
 
-  useEffect(() => {
-    setSongs(initialData);
+    if (error) {
+      console.error("Error fetching songs:", error);
+    } else {
+      setSongs(data || []);
+    }
     setLoading(false);
-  }, []);
-
-  const approveSong = (id: string) => {
-    setSongs((prev) =>
-      prev.map((song) =>
-        song.id === id ? { ...song, isApproved: true } : song,
-      ),
-    );
   };
 
-  const deleteSong = (id: string) => {
-    if (
-      confirm("Are you sure you want to delete or reject this composition?")
-    ) {
-      setSongs((prev) => prev.filter((song) => song.id !== id));
+  useEffect(() => {
+    fetchSongs();
+  }, []);
+
+  // Approve song in Supabase
+  const approveSong = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("MediaItem")
+        .update({ isApproved: true })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state instantly
+      setSongs((prev) =>
+        prev.map((song) =>
+          song.id === id ? { ...song, isApproved: true } : song,
+        ),
+      );
+      alert("Score approved and published to the public catalog!");
+    } catch (err: any) {
+      alert(`Error approving score: ${err.message}`);
     }
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  // Delete or reject song from Supabase
+  const deleteSong = async (id: string) => {
+    if (
+      confirm("Are you sure you want to delete or reject this composition?")
+    ) {
+      try {
+        const { error } = await supabase
+          .from("MediaItem")
+          .delete()
+          .eq("id", id);
+
+        if (error) throw error;
+
+        // Update local state instantly
+        setSongs((prev) => prev.filter((song) => song.id !== id));
+      } catch (err: any) {
+        alert(`Error deleting score: ${err.message}`);
+      }
+    }
+  };
+
+  // Save edited details to Supabase
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSong) return;
 
-    setSongs((prev) =>
-      prev.map((song) => (song.id === editingSong.id ? editingSong : song)),
-    );
-    setEditingSong(null);
+    try {
+      const { error } = await supabase
+        .from("MediaItem")
+        .update({
+          title: editingSong.title,
+          composer: editingSong.composer,
+          season: editingSong.season,
+          role: editingSong.role,
+          keySignature: editingSong.keySignature,
+          lyrics: editingSong.lyrics,
+        })
+        .eq("id", editingSong.id);
+
+      if (error) throw error;
+
+      setSongs((prev) =>
+        prev.map((song) => (song.id === editingSong.id ? editingSong : song)),
+      );
+      setEditingSong(null);
+      alert("Changes saved successfully!");
+    } catch (err: any) {
+      alert(`Error updating score: ${err.message}`);
+    }
   };
 
   const pendingSongs = songs.filter((s) => !s.isApproved);
@@ -169,25 +186,38 @@ export default function AdminPage() {
                     <div className="space-y-2 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] font-[family-name:var(--font-cinzel)] italic text-amber-900 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                          {song.season}
+                          {song.season || "Ordinary Time"}
                         </span>
                         <span className="text-[11px] font-[family-name:var(--font-cinzel)] text-stone-700 bg-stone-100 px-2 py-0.5 rounded">
-                          {song.role || "Liturgical Hymn"}
+                          {song.role || song.category || "Liturgical Hymn"}
                         </span>
-                        <span className="text-[11px] font-mono text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200">
-                          {song.keySignature}
-                        </span>
+                        {song.keySignature && (
+                          <span className="text-[11px] font-mono text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded border border-amber-200">
+                            {song.keySignature}
+                          </span>
+                        )}
                       </div>
 
                       <h3 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
                         {song.title}
                       </h3>
                       <p className="text-xs font-[family-name:var(--font-cinzel)] italic text-stone-600">
-                        Submitted composer: {song.composer}
+                        Composer: {song.composer}
                       </p>
 
+                      {song.fileUrl && (
+                        <a
+                          href={song.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-amber-800 hover:underline font-medium inline-block pt-1"
+                        >
+                          📄 View PDF Score Document ↗
+                        </a>
+                      )}
+
                       {song.lyrics && (
-                        <p className="text-xs font-[family-name:var(--font-cinzel)] italic text-stone-500 bg-stone-50 p-3 rounded border border-stone-200 line-clamp-2">
+                        <p className="text-xs font-[family-name:var(--font-cinzel)] italic text-stone-500 bg-stone-50 p-3 rounded border border-stone-200 line-clamp-2 mt-2">
                           &quot;{song.lyrics}&quot;
                         </p>
                       )}
@@ -223,55 +253,75 @@ export default function AdminPage() {
         {/* Published Catalog Section */}
         {!loading && activeTab === "approved" && (
           <div className="bg-white border border-amber-900/15 rounded-lg overflow-hidden shadow-sm">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-stone-900 text-amber-100 font-[family-name:var(--font-cinzel)] text-xs uppercase tracking-wider">
-                  <th className="py-3.5 px-4 font-normal">Title</th>
-                  <th className="py-3.5 px-4 font-normal">Composer</th>
-                  <th className="py-3.5 px-4 font-normal">Season</th>
-                  <th className="py-3.5 px-4 font-normal">Liturgical Role</th>
-                  <th className="py-3.5 px-4 font-normal">Key</th>
-                  <th className="py-3.5 px-4 font-normal text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100 font-[family-name:var(--font-cinzel)] text-sm">
-                {approvedSongs.map((song) => (
-                  <tr key={song.id} className="hover:bg-amber-50/30 transition">
-                    <td className="py-3.5 px-4 font-bold text-stone-900">
-                      {song.title}
-                    </td>
-                    <td className="py-3.5 px-4 text-stone-600 italic">
-                      {song.composer}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-amber-900">
-                      {song.season}
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-stone-600">
-                      {song.role || "Hymn"}
-                    </td>
-                    <td className="py-3.5 px-4 font-mono text-xs">
-                      {song.keySignature}
-                    </td>
-                    <td className="py-3.5 px-4 text-right space-x-3">
-                      <button
-                        onClick={() => setEditingSong(song)}
-                        className="text-xs text-amber-900 hover:text-amber-950 font-[family-name:var(--font-cinzel)] cursor-pointer underline"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteSong(song.id)}
-                        className="text-xs text-rose-700 hover:text-rose-900 font-[family-name:var(--font-cinzel)] cursor-pointer"
-                      >
-                        Delete
-                      </button>
-                    </td>
+            {approvedSongs.length === 0 ? (
+              <div className="p-12 text-center font-[family-name:var(--font-cinzel)] italic text-stone-500">
+                No approved hymns in the public catalog yet.
+              </div>
+            ) : (
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-stone-900 text-amber-100 font-[family-name:var(--font-cinzel)] text-xs uppercase tracking-wider">
+                    <th className="py-3.5 px-4 font-normal">Title</th>
+                    <th className="py-3.5 px-4 font-normal">Composer</th>
+                    <th className="py-3.5 px-4 font-normal">Season</th>
+                    <th className="py-3.5 px-4 font-normal">Liturgical Role</th>
+                    <th className="py-3.5 px-4 font-normal">PDF</th>
+                    <th className="py-3.5 px-4 font-normal text-right">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-stone-100 font-[family-name:var(--font-cinzel)] text-sm">
+                  {approvedSongs.map((song) => (
+                    <tr
+                      key={song.id}
+                      className="hover:bg-amber-50/30 transition"
+                    >
+                      <td className="py-3.5 px-4 font-bold text-stone-900">
+                        {song.title}
+                      </td>
+                      <td className="py-3.5 px-4 text-stone-600 italic">
+                        {song.composer}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-amber-900">
+                        {song.season || "Ordinary Time"}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-stone-600">
+                        {song.role || song.category || "Hymn"}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs">
+                        {song.fileUrl ? (
+                          <a
+                            href={song.fileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-amber-800 underline hover:text-amber-950 font-medium"
+                          >
+                            View PDF
+                          </a>
+                        ) : (
+                          <span className="text-stone-400">None</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-3">
+                        <button
+                          onClick={() => setEditingSong(song)}
+                          className="text-xs text-amber-900 hover:text-amber-950 font-[family-name:var(--font-cinzel)] cursor-pointer underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteSong(song.id)}
+                          className="text-xs text-rose-700 hover:text-rose-900 font-[family-name:var(--font-cinzel)] cursor-pointer"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </main>
@@ -334,7 +384,7 @@ export default function AdminPage() {
                     Season
                   </label>
                   <select
-                    value={editingSong.season}
+                    value={editingSong.season || "Ordinary Time"}
                     onChange={(e) =>
                       setEditingSong({ ...editingSong, season: e.target.value })
                     }
@@ -346,7 +396,7 @@ export default function AdminPage() {
                     <option value="Triduum">Triduum</option>
                     <option value="Easter">Easter</option>
                     <option value="Ordinary Time">Ordinary Time</option>
-                    <option value="Marian">Marian Feasts</option>
+                    <option value="Marian Feasts">Marian Feasts</option>
                   </select>
                 </div>
 
@@ -397,7 +447,7 @@ export default function AdminPage() {
                   </label>
                   <input
                     type="text"
-                    value={editingSong.keySignature}
+                    value={editingSong.keySignature || ""}
                     onChange={(e) =>
                       setEditingSong({
                         ...editingSong,
