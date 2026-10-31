@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 interface Hymn {
@@ -133,21 +133,24 @@ function getLiturgicalInfo(dateStr: string): {
   };
 }
 
-export default function LiturgicalPlannerPage() {
+function PlannerContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryDate = searchParams?.get("date");
 
   const getTodayFormatted = () => {
     const today = new Date();
     return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   };
 
-  const [selectedDate, setSelectedDate] = useState(getTodayFormatted);
+  const [selectedDate, setSelectedDate] = useState(
+    () => queryDate || getTodayFormatted(),
+  );
   const [feastName, setFeastName] = useState("");
   const [season, setSeason] = useState("");
   const [liturgicalColor, setLiturgicalColor] = useState("");
 
   const [approvedHymns, setApprovedHymns] = useState<Hymn[]>([]);
-  // Selections now map each part to an array of hymn IDs (`string[]`)
   const [selections, setSelections] = useState<Record<string, string[]>>({
     entrance: [],
     kyrie: [],
@@ -269,7 +272,7 @@ export default function LiturgicalPlannerPage() {
       if (!res.ok) throw new Error(data.error);
       if (data.suggestions) {
         setSelections((prev) => ({ ...prev, ...data.suggestions }));
-        alert("✨ AI successfully populated multiple suggested scores!");
+        alert("✨ AI successfully populated suggested scores!");
       }
     } catch (err: any) {
       alert(`AI Error: ${err.message}`);
@@ -427,18 +430,48 @@ export default function LiturgicalPlannerPage() {
               Liturgical Calendar Planner
             </span>
             <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
-              Mass Repertoire Builder (Multi-Song Support)
+              Mass Repertoire Builder
             </h1>
           </div>
-          <button
-            onClick={() => router.push("/hymns")}
-            className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer"
-          >
-            ← Back to Catalog
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push("/planner/my-plans")}
+              className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 bg-amber-100/70 px-3.5 py-2 rounded hover:bg-amber-200 font-bold cursor-pointer"
+            >
+              My Saved Plans
+            </button>
+            <button
+              onClick={() => router.push("/hymns")}
+              className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer"
+            >
+              ← Catalog
+            </button>
+          </div>
         </div>
 
-        {/* Date & Feast Selector Card */}
+        {/* Ownership Notice */}
+        {!currentUser && (
+          <div className="bg-amber-100 border border-amber-300 p-4 rounded text-xs text-amber-900 flex justify-between items-center">
+            <span>
+              You are viewing as a guest. Log in to create and edit plans.
+            </span>
+            <button
+              onClick={() => router.push("/login")}
+              className="bg-amber-900 text-amber-50 px-3 py-1.5 rounded font-bold cursor-pointer"
+            >
+              Log In
+            </button>
+          </div>
+        )}
+
+        {currentUser && planOwnerId && planOwnerId !== currentUser.id && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded text-xs text-red-800">
+            🔒 This plan belongs to another account. You can view and comment,
+            but editing is restricted.
+          </div>
+        )}
+
+        {/* Date & Feast Card */}
         <div className="bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
@@ -449,7 +482,7 @@ export default function LiturgicalPlannerPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900"
+                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 font-sans"
               />
             </div>
 
@@ -490,12 +523,12 @@ export default function LiturgicalPlannerPage() {
           </div>
         )}
 
-        {/* Order of Mass Selections */}
+        {/* Mass Parts */}
         <div className="bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-6">
           <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 border-b border-amber-900/10 pb-3">
             Order of Mass Selections{" "}
             <span className="text-xs font-normal text-stone-500">
-              (Hold Ctrl / Cmd to select multiple songs per part)
+              (Hold Ctrl / Cmd to select multiple songs)
             </span>
           </h2>
 
@@ -552,7 +585,7 @@ export default function LiturgicalPlannerPage() {
             })}
           </div>
 
-          {/* Action & Owner Controls */}
+          {/* Action Controls */}
           {isOwner && (
             <div className="pt-6 border-t border-stone-100 flex flex-wrap justify-between items-center gap-4">
               <div className="flex gap-2">
@@ -608,5 +641,19 @@ export default function LiturgicalPlannerPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LiturgicalPlannerPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex justify-center items-center bg-[#FDFBF7]">
+          Loading planner...
+        </div>
+      }
+    >
+      <PlannerContent />
+    </Suspense>
   );
 }
