@@ -11,9 +11,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // AI Selection Matching Engine
-    // Filters approved scores by matching roles and feast keywords
-    const suggestions: Record<string, string> = {};
+    // Returns an array of hymn IDs for each role
+    const suggestions: Record<string, string[]> = {};
 
     const roles = [
       "entrance",
@@ -52,21 +51,16 @@ export async function POST(req: Request) {
     roles.forEach((roleKey) => {
       const dbRole = roleToDatabaseRole[roleKey];
 
-      // Find candidate hymns matching the role or tagged General
       const candidateHymns = availableHymns.filter(
         (h: any) => h.role === dbRole || h.role === "General" || !h.role,
       );
 
       if (candidateHymns.length > 0) {
-        // Pick the best match for the feast theme or fallback to first candidate
-        const match =
-          candidateHymns.find(
-            (h: any) =>
-              feastName.toLowerCase().includes(h.title.toLowerCase()) ||
-              (h.season && h.season.toLowerCase() === season.toLowerCase()),
-          ) || candidateHymns[0];
-
-        suggestions[roleKey] = match.id;
+        // Pick up to 2 matching hymns for this role
+        const matches = candidateHymns.slice(0, 2).map((h: any) => h.id);
+        suggestions[roleKey] = matches;
+      } else {
+        suggestions[roleKey] = [];
       }
     });
 

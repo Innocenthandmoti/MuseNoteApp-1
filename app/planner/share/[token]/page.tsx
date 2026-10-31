@@ -9,8 +9,7 @@ interface Plan {
   date: string;
   feast_name: string;
   season: string;
-  selections: Record<string, string>;
-  user_id?: string;
+  selections: Record<string, string[]>;
 }
 
 interface HymnDetail {
@@ -54,20 +53,26 @@ export default function SharedLiturgyPage() {
         .single();
 
       if (error || !planData) {
-        console.error("Plan not found");
         setLoading(false);
         return;
       }
 
       setPlan(planData);
 
-      // Fetch details for selected hymns
-      const hymnIds = Object.values(planData.selections || {}).filter(Boolean);
-      if (hymnIds.length > 0) {
+      // Collect all hymn IDs across arrays
+      const allHymnIds: string[] = [];
+      const selectionsObj = planData.selections || {};
+      Object.values(selectionsObj).forEach((ids: any) => {
+        if (Array.isArray(ids)) {
+          allHymnIds.push(...ids);
+        }
+      });
+
+      if (allHymnIds.length > 0) {
         const { data: hymnData } = await supabase
           .from("MediaItem")
           .select("id, title, composer, fileUrl, audioUrl, videoUrl")
-          .in("id", hymnIds);
+          .in("id", allHymnIds);
 
         if (hymnData) {
           const map: Record<string, HymnDetail> = {};
@@ -78,7 +83,6 @@ export default function SharedLiturgyPage() {
         }
       }
 
-      // Fetch comments for this plan
       fetchComments(planData.id);
       setLoading(false);
     };
@@ -133,12 +137,9 @@ export default function SharedLiturgyPage() {
         <h1 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
           Liturgy Plan Not Found
         </h1>
-        <p className="text-xs text-stone-600 mt-2 mb-6">
-          This share link may be invalid or the plan has been removed.
-        </p>
         <button
           onClick={() => router.push("/")}
-          className="bg-amber-900 text-amber-50 px-4 py-2 rounded text-xs font-[family-name:var(--font-cinzel)] font-semibold cursor-pointer"
+          className="mt-4 bg-amber-900 text-amber-50 px-4 py-2 rounded text-xs font-bold"
         >
           Go to Home
         </button>
@@ -166,13 +167,11 @@ export default function SharedLiturgyPage() {
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-3xl mx-auto space-y-8">
-        {/* Read-Only Banner */}
-        <div className="bg-amber-100/80 border border-amber-300 rounded-lg p-3.5 text-center text-xs text-amber-950 font-[family-name:var(--font-cinzel)] font-semibold">
-          👀 Read-Only Shared View — You are viewing the official Mass plan. You
-          can listen, view sheet music, or leave comments below.
+        <div className="bg-amber-100/85 border border-amber-300 rounded-lg p-3.5 text-center text-xs text-amber-950 font-[family-name:var(--font-cinzel)] font-semibold">
+          👀 Read-Only Shared View — Viewing official Mass repertoire. Leave
+          feedback or comments below.
         </div>
 
-        {/* Header */}
         <div className="text-center space-y-3 border-b border-amber-900/20 pb-6">
           <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
             MuseNote Liturgical Program
@@ -193,52 +192,52 @@ export default function SharedLiturgyPage() {
 
           <div className="space-y-4">
             {massParts.map((part) => {
-              const hymnId = plan.selections[part.key];
-              const hymn = hymnId ? hymnMap[hymnId] : null;
+              const hymnIds: string[] = plan.selections[part.key] || [];
 
               return (
                 <div
                   key={part.key}
-                  className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[#FDFBF7] p-4 rounded-lg border border-stone-200 gap-2"
+                  className="bg-[#FDFBF7] p-4 rounded-lg border border-stone-200 space-y-2"
                 >
-                  <div>
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold uppercase tracking-wider text-amber-900 block">
-                      {part.label}
-                    </span>
-                    <p className="text-sm font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-0.5">
-                      {hymn ? (
-                        hymn.title
-                      ) : (
-                        <span className="text-stone-400 italic font-normal">
-                          No selection
-                        </span>
-                      )}
-                    </p>
-                    {hymn && hymn.composer && (
-                      <p className="text-xs text-stone-500 italic">
-                        By {hymn.composer}
-                      </p>
-                    )}
-                  </div>
+                  <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold uppercase tracking-wider text-amber-900 block">
+                    {part.label}
+                  </span>
 
-                  {hymn && (
-                    <div className="flex gap-2 text-xs">
-                      {hymn.fileUrl && (
-                        <a
-                          href={hymn.fileUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="bg-amber-900 hover:bg-amber-950 text-amber-50 px-3 py-1.5 rounded font-semibold font-[family-name:var(--font-cinzel)] transition cursor-pointer"
-                        >
-                          View PDF ↗
-                        </a>
-                      )}
-                      <button
-                        onClick={() => router.push(`/hymns/${hymn.id}`)}
-                        className="bg-stone-100 hover:bg-stone-200 text-stone-800 px-3 py-1.5 rounded font-semibold font-[family-name:var(--font-cinzel)] cursor-pointer"
-                      >
-                        Details
-                      </button>
+                  {hymnIds.length === 0 ? (
+                    <p className="text-xs text-stone-400 italic">
+                      No selection
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {hymnIds.map((id, index) => {
+                        const hymn = hymnMap[id];
+                        if (!hymn) return null;
+                        return (
+                          <div
+                            key={id}
+                            className="flex justify-between items-center bg-white p-2.5 rounded border border-amber-900/10"
+                          >
+                            <div>
+                              <p className="text-xs font-bold text-stone-900">
+                                {index + 1}. {hymn.title}{" "}
+                                {hymn.composer ? `(${hymn.composer})` : ""}
+                              </p>
+                            </div>
+                            <div className="flex gap-2 text-xs">
+                              {hymn.fileUrl && (
+                                <a
+                                  href={hymn.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-amber-900 text-amber-50 px-2.5 py-1 rounded font-semibold text-[10px]"
+                                >
+                                  PDF ↗
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -250,15 +249,11 @@ export default function SharedLiturgyPage() {
         {/* Comments Section */}
         <div className="bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-6">
           <h2 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 border-b border-amber-900/10 pb-3">
-            💬 Choir & Community Feedback / Comments
+            💬 Choir & Community Feedback
           </h2>
 
-          {/* Comment List */}
           {comments.length === 0 ? (
-            <p className="text-xs text-stone-500 italic">
-              No comments yet. Be the first to leave feedback for this liturgy
-              plan!
-            </p>
+            <p className="text-xs text-stone-500 italic">No comments yet.</p>
           ) : (
             <div className="space-y-3">
               {comments.map((c) => (
@@ -282,7 +277,6 @@ export default function SharedLiturgyPage() {
             </div>
           )}
 
-          {/* Add Comment Form */}
           <form
             onSubmit={handleAddComment}
             className="pt-4 border-t border-stone-100 space-y-3"
@@ -293,25 +287,25 @@ export default function SharedLiturgyPage() {
             <input
               type="text"
               required
-              placeholder="Your Name / Role (e.g., Soprano Section Leader)"
+              placeholder="Your Name / Role (e.g., Choir Director)"
               value={authorName}
               onChange={(e) => setAuthorName(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-xs text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-xs text-stone-900"
             />
             <textarea
               rows={3}
               required
-              placeholder="Write your note or feedback here..."
+              placeholder="Write your feedback..."
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-xs text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-xs text-stone-900"
             />
             <button
               type="submit"
               disabled={submittingComment}
-              className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-[family-name:var(--font-cinzel)] font-bold px-5 py-2.5 rounded shadow-xs transition cursor-pointer disabled:opacity-50"
+              className="bg-amber-900 text-amber-50 text-xs font-bold px-5 py-2.5 rounded cursor-pointer"
             >
-              {submittingComment ? "Posting Comment..." : "Post Comment"}
+              {submittingComment ? "Posting..." : "Post Comment"}
             </button>
           </form>
         </div>

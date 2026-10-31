@@ -147,21 +147,22 @@ export default function LiturgicalPlannerPage() {
   const [liturgicalColor, setLiturgicalColor] = useState("");
 
   const [approvedHymns, setApprovedHymns] = useState<Hymn[]>([]);
-  const [selections, setSelections] = useState<Record<string, string>>({
-    entrance: "",
-    kyrie: "",
-    gloria: "",
-    responsorial_psalm: "",
-    gospel_acclamation: "",
-    credo: "",
-    prayer_of_the_faithful: "",
-    offertory: "",
-    sanctus: "",
-    pater_noster: "",
-    agnus_dei: "",
-    communion: "",
-    thanksgiving: "",
-    recessional: "",
+  // Selections now map each part to an array of hymn IDs (`string[]`)
+  const [selections, setSelections] = useState<Record<string, string[]>>({
+    entrance: [],
+    kyrie: [],
+    gloria: [],
+    responsorial_psalm: [],
+    gospel_acclamation: [],
+    credo: [],
+    prayer_of_the_faithful: [],
+    offertory: [],
+    sanctus: [],
+    pater_noster: [],
+    agnus_dei: [],
+    communion: [],
+    thanksgiving: [],
+    recessional: [],
   });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -171,16 +172,12 @@ export default function LiturgicalPlannerPage() {
   const [saving, setSaving] = useState(false);
   const [aiGenerating, setAiGenerating] = useState(false);
 
-  // Check auth session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        setCurrentUser(session.user);
-      }
+      if (session) setCurrentUser(session.user);
     });
   }, []);
 
-  // Sync calendar and check existing plans
   useEffect(() => {
     const info = getLiturgicalInfo(selectedDate);
     setFeastName(info.feast);
@@ -208,20 +205,20 @@ export default function LiturgicalPlannerPage() {
         setPlanOwnerId(null);
         setShareableLink("");
         setSelections({
-          entrance: "",
-          kyrie: "",
-          gloria: "",
-          responsorial_psalm: "",
-          gospel_acclamation: "",
-          credo: "",
-          prayer_of_the_faithful: "",
-          offertory: "",
-          sanctus: "",
-          pater_noster: "",
-          agnus_dei: "",
-          communion: "",
-          thanksgiving: "",
-          recessional: "",
+          entrance: [],
+          kyrie: [],
+          gloria: [],
+          responsorial_psalm: [],
+          gospel_acclamation: [],
+          credo: [],
+          prayer_of_the_faithful: [],
+          offertory: [],
+          sanctus: [],
+          pater_noster: [],
+          agnus_dei: [],
+          communion: [],
+          thanksgiving: [],
+          recessional: [],
         });
       }
     };
@@ -229,7 +226,6 @@ export default function LiturgicalPlannerPage() {
     checkExistingPlan();
   }, [selectedDate]);
 
-  // Load approved repertoire
   useEffect(() => {
     supabase
       .from("MediaItem")
@@ -241,8 +237,15 @@ export default function LiturgicalPlannerPage() {
       });
   }, []);
 
-  const handleSelectionChange = (massPartKey: string, hymnId: string) => {
-    setSelections((prev) => ({ ...prev, [massPartKey]: hymnId }));
+  const handleMultiSelectChange = (
+    massPartKey: string,
+    options: HTMLCollectionOf<HTMLOptionElement>,
+  ) => {
+    const selectedIds = Array.from(options)
+      .filter((opt) => opt.selected)
+      .map((opt) => opt.value);
+
+    setSelections((prev) => ({ ...prev, [massPartKey]: selectedIds }));
   };
 
   const handleGenerateAiPlan = async () => {
@@ -266,7 +269,7 @@ export default function LiturgicalPlannerPage() {
       if (!res.ok) throw new Error(data.error);
       if (data.suggestions) {
         setSelections((prev) => ({ ...prev, ...data.suggestions }));
-        alert("✨ AI successfully populated suggested scores!");
+        alert("✨ AI successfully populated multiple suggested scores!");
       }
     } catch (err: any) {
       alert(`AI Error: ${err.message}`);
@@ -286,7 +289,6 @@ export default function LiturgicalPlannerPage() {
 
     setSaving(true);
     try {
-      // Get the active session token
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -425,7 +427,7 @@ export default function LiturgicalPlannerPage() {
               Liturgical Calendar Planner
             </span>
             <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
-              Mass Repertoire Builder
+              Mass Repertoire Builder (Multi-Song Support)
             </h1>
           </div>
           <button
@@ -435,29 +437,6 @@ export default function LiturgicalPlannerPage() {
             ← Back to Catalog
           </button>
         </div>
-
-        {/* Ownership Warning Banner */}
-        {!currentUser && (
-          <div className="bg-amber-100 border border-amber-300 p-4 rounded text-xs text-amber-900 flex justify-between items-center">
-            <span>
-              You are viewing as a guest. Log in with your Individual or Parish
-              account to create and edit plans.
-            </span>
-            <button
-              onClick={() => router.push("/login")}
-              className="bg-amber-900 text-amber-50 px-3 py-1.5 rounded font-bold cursor-pointer"
-            >
-              Log In
-            </button>
-          </div>
-        )}
-
-        {currentUser && planOwnerId && planOwnerId !== currentUser.id && (
-          <div className="bg-red-50 border border-red-200 p-4 rounded text-xs text-red-800">
-            🔒 This plan was created by another account/parish. You can view it,
-            but editing or deleting is restricted to the owner.
-          </div>
-        )}
 
         {/* Date & Feast Selector Card */}
         <div className="bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-4">
@@ -470,7 +449,7 @@ export default function LiturgicalPlannerPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900 font-sans"
+                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900"
               />
             </div>
 
@@ -483,23 +462,13 @@ export default function LiturgicalPlannerPage() {
                 value={feastName}
                 disabled={!isOwner}
                 onChange={(e) => setFeastName(e.target.value)}
-                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 font-bold text-amber-950 disabled:opacity-70"
+                className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm font-bold text-amber-950 disabled:opacity-70"
               />
             </div>
           </div>
-
-          <div className="flex flex-wrap gap-4 pt-2 border-t border-stone-100 text-xs font-[family-name:var(--font-cinzel)] text-stone-600">
-            <span>
-              Season: <strong className="text-stone-900">{season}</strong>
-            </span>
-            <span>
-              Vestment Color:{" "}
-              <strong className="text-amber-900">{liturgicalColor}</strong>
-            </span>
-          </div>
         </div>
 
-        {/* AI Liturgical Assistant */}
+        {/* AI Assistant */}
         {isOwner && (
           <div className="bg-gradient-to-r from-amber-900 via-amber-800 to-amber-950 text-amber-50 rounded-xl p-6 shadow-md flex flex-col sm:flex-row justify-between items-center gap-4">
             <div>
@@ -507,7 +476,8 @@ export default function LiturgicalPlannerPage() {
                 ✨ AI Liturgical Assistant
               </h3>
               <p className="text-xs text-amber-100/90 italic">
-                Auto-match scores from your repertoire for {feastName}.
+                Auto-suggest multiple songs from your repertoire for {feastName}
+                .
               </p>
             </div>
             <button
@@ -523,7 +493,10 @@ export default function LiturgicalPlannerPage() {
         {/* Order of Mass Selections */}
         <div className="bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-6">
           <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 border-b border-amber-900/10 pb-3">
-            Order of Mass Selections
+            Order of Mass Selections{" "}
+            <span className="text-xs font-normal text-stone-500">
+              (Hold Ctrl / Cmd to select multiple songs per part)
+            </span>
           </h2>
 
           <div className="space-y-4">
@@ -532,6 +505,7 @@ export default function LiturgicalPlannerPage() {
                 (h) =>
                   h.role === part.targetRole || h.role === "General" || !h.role,
               );
+              const selectedValues = selections[part.key] || [];
 
               return (
                 <div
@@ -545,20 +519,26 @@ export default function LiturgicalPlannerPage() {
                     <span className="text-[10px] text-stone-500 italic">
                       Role: {part.targetRole}
                     </span>
+                    {selectedValues.length > 0 && (
+                      <span className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full font-bold mt-1 inline-block">
+                        {selectedValues.length} selected
+                      </span>
+                    )}
                   </div>
 
                   <div className="sm:col-span-2">
                     <select
-                      value={selections[part.key] || ""}
+                      multiple
+                      value={selectedValues}
                       disabled={!isOwner}
                       onChange={(e) =>
-                        handleSelectionChange(part.key, e.target.value)
+                        handleMultiSelectChange(
+                          part.key,
+                          e.target.selectedOptions,
+                        )
                       }
-                      className="w-full bg-white border border-amber-900/30 rounded-sm px-3 py-2 text-sm text-stone-900 disabled:bg-stone-100 disabled:opacity-70"
+                      className="w-full bg-white border border-amber-900/30 rounded-sm px-3 py-2 text-sm text-stone-900 h-24 disabled:bg-stone-100 disabled:opacity-70"
                     >
-                      <option value="">
-                        -- Select {part.targetRole} Score --
-                      </option>
                       {matchingHymns.map((hymn) => (
                         <option key={hymn.id} value={hymn.id}>
                           {hymn.title}{" "}
