@@ -1,339 +1,246 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 export default function UploadPage() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
+  const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
-  const [category, setCategory] = useState("HYMN");
-  const [season, setSeason] = useState("Ordinary Time");
   const [role, setRole] = useState("Entrance");
-  const [customRole, setCustomRole] = useState("");
+  const [season, setSeason] = useState("Ordinary Time");
+
+  const [lyrics, setLyrics] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [lyrics, setLyrics] = useState("");
-  const [fileName, setFileName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [userChecked, setUserChecked] = useState(false);
+
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        alert("You must log in or register before uploading a sacred score.");
-        router.push("/login");
-      } else {
-        setUserChecked(true);
-      }
+      if (session) setCurrentUser(session.user);
     });
-  }, [router]);
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "application/pdf") {
-        alert("Please upload a valid PDF score document.");
-        return;
-      }
-      setFileName(file.name);
+    const uploadedFile = e.target.files?.[0];
+    if (!uploadedFile) return;
+
+    setFile(uploadedFile);
+    if (!title) {
+      setTitle(uploadedFile.name.replace(/\.[^/.]+$/, ""));
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSaveToCatalog = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    if (!file || !title) {
+      alert("Please provide a PDF file and a song title.");
+      return;
+    }
 
-    setLoading(true);
-
+    setUploading(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("Your session has expired. Please log in again.");
-      }
+      // 1. Upload PDF file to Supabase Storage bucket ('scores')
+      const fileName = `${Date.now()}_${file.name}`;
+      const { error: storageError } = await supabase.storage
+        .from("scores")
+        .upload(fileName, file);
 
-      const finalRole = role === "Other" ? customRole || "General" : role;
+      if (storageError) throw storageError;
 
-      const formData = new FormData();
-      formData.append("title", title);
-      formData.append("composer", composer);
-      formData.append("category", category);
-      formData.append("season", season);
-      formData.append("role", finalRole);
-      if (audioUrl) formData.append("audioUrl", audioUrl);
-      if (videoUrl) formData.append("videoUrl", videoUrl);
-      if (lyrics) formData.append("lyrics", lyrics);
+      const { data: publicUrlData } = supabase.storage
+        .from("scores")
+        .getPublicUrl(fileName);
 
-      if (fileInputRef.current?.files?.[0]) {
-        formData.append("file", fileInputRef.current.files[0]);
-      }
-
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: formData,
+      // 2. Insert metadata & lyrics into 'MediaItem' table
+      const { error: dbError } = await supabase.from("MediaItem").insert({
+        title,
+        composer,
+        role,
+        season,
+        lyrics,
+        audioUrl: audioUrl || null,
+        videoUrl: videoUrl || null,
+        fileUrl: publicUrlData.publicUrl,
+        user_id: currentUser?.id || null,
+        isApproved: false,
       });
 
-      const data = await res.json();
+      if (dbError) throw dbError;
 
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to upload composition");
-      }
-
-      alert("Score submitted successfully! It is now pending admin approval.");
+      alert("🎉 Song uploaded and saved successfully!");
+      setTitle("");
+      setComposer("");
+      setLyrics("");
+      setAudioUrl("");
+      setVideoUrl("");
+      setFile(null);
       router.push("/hymns");
     } catch (err: any) {
-      alert(`Error: ${err.message}`);
+      alert(`Upload error: ${err.message}`);
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
-  if (!userChecked) {
+  if (!mounted) {
     return (
-      <div className="text-center py-20 text-stone-600 font-[family-name:var(--font-cinzel)]">
-        Verifying session...
+      <div className="min-h-screen bg-[#FDFBF7] p-12">
+        Loading upload portal...
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-12 px-6">
-      <div className="border-b border-amber-900/20 pb-4 mb-8">
-        <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
-          Repertoire Submission Suite
-        </span>
-        <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
-          Upload Sacred Score
-        </h1>
-        <p className="text-stone-600 text-sm italic mt-1">
-          Upload PDF sheet music from your device, select its liturgical
-          function, attach optional audio/video preview links, and submit for
-          review.
-        </p>
-      </div>
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded-md border border-amber-900/20 shadow-xs space-y-6"
-      >
-        {/* Title */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Composition Title *
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="e.g., Ave Verum Corpus"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-          />
-        </div>
-
-        {/* Composer */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Composer / Source
-          </label>
-          <input
-            type="text"
-            placeholder="e.g., Mozart or Gregorian Chant"
-            value={composer}
-            onChange={(e) => setComposer(e.target.value)}
-            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-          />
-        </div>
-
-        {/* Category & Season */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
+      <div className="max-w-2xl mx-auto space-y-6 bg-white rounded-xl border border-amber-900/20 p-8 shadow-xs">
+        <div className="border-b border-amber-900/10 pb-4 flex justify-between items-center">
           <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Sacred Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            >
-              <option value="HYMN">Hymn</option>
-              <option value="CHANT">Gregorian Chant</option>
-              <option value="POLYPHONY">Sacred Polyphony</option>
-              <option value="MASS_SETTING">Mass Setting</option>
-              <option value="MOTET">Motet</option>
-            </select>
+            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
+              Music Repository
+            </span>
+            <h1 className="text-2xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
+              Upload Sacred Score
+            </h1>
           </div>
-
-          <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Liturgical Season
-            </label>
-            <select
-              value={season}
-              onChange={(e) => setSeason(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            >
-              <option value="Ordinary Time">Ordinary Time</option>
-              <option value="Advent">Advent</option>
-              <option value="Christmas">Christmas</option>
-              <option value="Lent">Lent</option>
-              <option value="Triduum">Triduum</option>
-              <option value="Easter">Easter</option>
-              <option value="Marian Feasts">Marian Feasts</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Liturgical Role / Part of Mass */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Liturgical Role / Part of Mass
-          </label>
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+          <button
+            onClick={() => router.push("/hymns")}
+            className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer"
           >
-            <option value="Entrance">Entrance Hymn / Introit</option>
-            <option value="Kyrie">Kyrie (Lord Have Mercy)</option>
-            <option value="Gloria">Gloria (Glory to God)</option>
-            <option value="Responsorial Psalm">Responsorial Psalm</option>
-            <option value="Gospel Acclamation">
-              Gospel Acclamation / Alleluia
-            </option>
-            <option value="Credo">
-              Credo (I Believe / Nicene-Apostles Creed)
-            </option>
-            <option value="Prayer of the Faithful">
-              Prayer of the Faithful (Universal Prayer)
-            </option>
-            <option value="Offertory">Offertory / Presentation of Gifts</option>
-            <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
-            <option value="Mystery of Faith">
-              Mystery of Faith / Memorial Acclamation
-            </option>
-            <option value="Pater Noster">Pater Noster (Our Father)</option>
-            <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
-            <option value="Communion">Communion Processional / Hymn</option>
-            <option value="Thanksgiving">Post-Communion / Thanksgiving</option>
-            <option value="Recessional">Recessional / Dismissal</option>
-            <option value="Marian Antiphon">Marian Antiphon</option>
-            <option value="Benediction">Benediction / Adoration</option>
-            <option value="General">General / Meditation</option>
-            <option value="Other">Other (Specify below)</option>
-          </select>
+            ← Catalog
+          </button>
+        </div>
 
-          {role === "Other" && (
+        <form onSubmit={handleSaveToCatalog} className="space-y-4">
+          <div>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-2">
+              Select PDF Score File *
+            </label>
+            <input
+              type="file"
+              accept="application/pdf"
+              onChange={handleFileChange}
+              className="w-full text-xs text-stone-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-900 file:text-amber-50 hover:file:bg-amber-950 cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+              Song Title *
+            </label>
             <input
               type="text"
               required
-              placeholder="Specify part of Mass / liturgical role..."
-              value={customRole}
-              onChange={(e) => setCustomRole(e.target.value)}
-              className="mt-3 w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g., Panis Angelicus"
+              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
             />
-          )}
-        </div>
+          </div>
 
-        {/* Optional Audio & Video Link Inputs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Audio Link{" "}
-              <span className="text-stone-400 font-normal lowercase">
-                (optional)
-              </span>
-            </label>
-            <input
-              type="url"
-              placeholder="e.g., Spotify, SoundCloud, MP3 link"
-              value={audioUrl}
-              onChange={(e) => setAudioUrl(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Composer / Arranger
+              </label>
+              <input
+                type="text"
+                value={composer}
+                onChange={(e) => setComposer(e.target.value)}
+                placeholder="e.g., César Franck"
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Liturgical Role
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              >
+                <option value="Entrance">Entrance</option>
+                <option value="Kyrie">Kyrie</option>
+                <option value="Gloria">Gloria</option>
+                <option value="Responsorial Psalm">Responsorial Psalm</option>
+                <option value="Gospel Acclamation">Gospel Acclamation</option>
+                <option value="Credo">Credo</option>
+                <option value="Prayer of the Faithful">
+                  Prayer of the Faithful
+                </option>
+                <option value="Offertory">Offertory</option>
+                <option value="Sanctus">Sanctus</option>
+                <option value="Pater Noster">Pater Noster (Our Father)</option>
+                <option value="Agnus Dei">Agnus Dei</option>
+                <option value="Communion">Communion</option>
+                <option value="Thanksgiving">Thanksgiving</option>
+                <option value="Recessional">Recessional</option>
+                <option value="General">General</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Audio Link (Optional)
+              </label>
+              <input
+                type="url"
+                value={audioUrl}
+                onChange={(e) => setAudioUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Video Link (Optional)
+              </label>
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/..."
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-              Video Link{" "}
-              <span className="text-stone-400 font-normal lowercase">
-                (optional)
-              </span>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+              Song Lyrics (Manual Input)
             </label>
-            <input
-              type="url"
-              placeholder="e.g., https://youtube.com/watch?v=..."
-              value={videoUrl}
-              onChange={(e) => setVideoUrl(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
+            <textarea
+              rows={8}
+              value={lyrics}
+              onChange={(e) => setLyrics(e.target.value)}
+              placeholder="Type or paste lyrics here..."
+              className="w-full bg-[#FDFBF7] border border-stone-300 rounded p-3 text-xs text-stone-900 font-mono leading-relaxed"
             />
           </div>
-        </div>
 
-        {/* Lyrics & Stanzas */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Lyrics & Stanzas{" "}
-            <span className="text-stone-400 font-normal lowercase">
-              (optional)
-            </span>
-          </label>
-          <textarea
-            rows={4}
-            placeholder="Enter hymn verses or stanzas here..."
-            value={lyrics}
-            onChange={(e) => setLyrics(e.target.value)}
-            className="w-full bg-[#FDFBF7] border border-amber-900/30 rounded-sm px-3.5 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900"
-          />
-        </div>
-
-        {/* PDF File Upload */}
-        <div>
-          <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-2">
-            Upload PDF Score from Device
-          </label>
-          <div className="border-2 border-dashed border-amber-900/30 rounded-sm p-6 text-center bg-[#FDFBF7] hover:bg-amber-50/40 transition">
-            <input
-              type="file"
-              accept=".pdf"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              id="pdf-upload"
-            />
-            <label
-              htmlFor="pdf-upload"
-              className="cursor-pointer space-y-2 block"
-            >
-              <span className="text-2xl block text-amber-800">📄</span>
-              <span className="text-xs font-semibold text-stone-800 block">
-                {fileName
-                  ? `Selected: ${fileName}`
-                  : "Click to browse device for PDF score"}
-              </span>
-            </label>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <div className="pt-4 flex justify-end">
           <button
             type="submit"
-            disabled={loading}
-            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs font-[family-name:var(--font-cinzel)] tracking-wider font-semibold px-6 py-3 rounded-sm shadow-xs transition cursor-pointer disabled:opacity-50"
+            disabled={uploading}
+            className="w-full bg-amber-900 hover:bg-amber-950 text-amber-50 font-bold py-3 rounded text-xs tracking-wide uppercase font-[family-name:var(--font-cinzel)] cursor-pointer disabled:opacity-50 transition shadow-xs"
           >
-            {loading ? "Uploading Score..." : "Upload & Submit for Review"}
+            {uploading
+              ? "Uploading & Saving..."
+              : "Save Song & Lyrics to Catalog"}
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

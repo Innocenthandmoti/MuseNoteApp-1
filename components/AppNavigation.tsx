@@ -2,16 +2,38 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     setMounted(true);
+
+    // Check initial auth session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    // Listen to live auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -54,6 +76,7 @@ export function Header() {
           })}
         </nav>
 
+        {/* Desktop Right Side Actions */}
         <div className="hidden sm:flex items-center gap-3">
           <Link
             href="/upload"
@@ -62,9 +85,27 @@ export function Header() {
             <span className="text-amber-200 font-bold text-sm">+</span>
             <span>Upload Score</span>
           </Link>
+
+          {mounted &&
+            (session ? (
+              <button
+                onClick={handleSignOut}
+                className="bg-stone-100 hover:bg-stone-200 text-stone-800 font-[family-name:var(--font-cinzel)] text-xs tracking-wider px-3.5 py-2.5 rounded-sm border border-stone-300 transition font-semibold cursor-pointer"
+                title={session.user?.email}
+              >
+                Sign Out
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="bg-[#F5EFEB] hover:bg-amber-900 hover:text-amber-50 text-amber-950 border border-amber-900/30 font-[family-name:var(--font-cinzel)] text-xs tracking-wider px-3.5 py-2.5 rounded-sm transition font-semibold"
+              >
+                Sign In
+              </Link>
+            ))}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Toggle Button */}
         <div className="md:hidden flex items-center">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -117,7 +158,8 @@ export function Header() {
               </Link>
             );
           })}
-          <div className="pt-3 border-t border-amber-900/20">
+
+          <div className="pt-3 border-t border-amber-900/20 space-y-2">
             <Link
               href="/upload"
               onClick={() => setMobileMenuOpen(false)}
@@ -125,6 +167,26 @@ export function Header() {
             >
               + Upload Score Composition
             </Link>
+
+            {session ? (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  handleSignOut();
+                }}
+                className="w-full bg-stone-200 text-stone-800 text-center py-3 rounded text-xs font-[family-name:var(--font-cinzel)] tracking-wider block font-semibold cursor-pointer"
+              >
+                Sign Out ({session.user?.email})
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full bg-[#F5EFEB] border border-amber-900/30 text-amber-950 text-center py-3 rounded text-xs font-[family-name:var(--font-cinzel)] tracking-wider block font-semibold"
+              >
+                Sign In / Up
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -202,12 +264,17 @@ export function Footer() {
 
           <div>
             <h4 className="text-xs uppercase tracking-widest text-amber-900 font-bold mb-3 font-[family-name:var(--font-cinzel)]">
-              Administration
+              {"Administration & Access"}
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link href="/admin" className="hover:text-amber-950 transition">
                   Moderation Panel
+                </Link>
+              </li>
+              <li>
+                <Link href="/login" className="hover:text-amber-950 transition">
+                  User Sign In / Up
                 </Link>
               </li>
               <li>

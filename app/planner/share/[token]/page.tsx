@@ -9,7 +9,7 @@ interface Plan {
   date: string;
   feast_name: string;
   season: string;
-  selections: Record<string, string[]>;
+  selections: Record<string, any>;
 }
 
 interface HymnDetail {
@@ -59,12 +59,19 @@ export default function SharedLiturgyPage() {
 
       setPlan(planData);
 
-      // Collect all hymn IDs across arrays
+      // Collect all hymn IDs across arrays or strings safely
       const allHymnIds: string[] = [];
       const selectionsObj = planData.selections || {};
-      Object.values(selectionsObj).forEach((ids: any) => {
-        if (Array.isArray(ids)) {
-          allHymnIds.push(...ids);
+
+      Object.values(selectionsObj).forEach((val: any) => {
+        if (Array.isArray(val)) {
+          val.forEach((item) => {
+            if (typeof item === "string" && item.trim() !== "") {
+              allHymnIds.push(item);
+            }
+          });
+        } else if (typeof val === "string" && val.trim() !== "") {
+          allHymnIds.push(val);
         }
       });
 
@@ -139,7 +146,7 @@ export default function SharedLiturgyPage() {
         </h1>
         <button
           onClick={() => router.push("/")}
-          className="mt-4 bg-amber-900 text-amber-50 px-4 py-2 rounded text-xs font-bold"
+          className="mt-4 bg-amber-900 text-amber-50 px-4 py-2 rounded text-xs font-bold cursor-pointer"
         >
           Go to Home
         </button>
@@ -192,7 +199,12 @@ export default function SharedLiturgyPage() {
 
           <div className="space-y-4">
             {massParts.map((part) => {
-              const hymnIds: string[] = plan.selections[part.key] || [];
+              const rawVal = plan.selections?.[part.key];
+              const hymnIds: string[] = Array.isArray(rawVal)
+                ? rawVal
+                : rawVal
+                  ? [rawVal]
+                  : [];
 
               return (
                 <div
@@ -209,22 +221,24 @@ export default function SharedLiturgyPage() {
                     </p>
                   ) : (
                     <div className="space-y-2">
-                      {hymnIds.map((id, index) => {
-                        const hymn = hymnMap[id];
-                        if (!hymn) return null;
+                      {hymnIds.map((idOrText, index) => {
+                        const hymn = hymnMap[idOrText];
+                        const displayText = hymn
+                          ? `${hymn.title} ${hymn.composer ? `(${hymn.composer})` : ""}`
+                          : idOrText;
+
                         return (
                           <div
-                            key={id}
+                            key={idOrText + index}
                             className="flex justify-between items-center bg-white p-2.5 rounded border border-amber-900/10"
                           >
                             <div>
                               <p className="text-xs font-bold text-stone-900">
-                                {index + 1}. {hymn.title}{" "}
-                                {hymn.composer ? `(${hymn.composer})` : ""}
+                                {index + 1}. {displayText}
                               </p>
                             </div>
                             <div className="flex gap-2 text-xs">
-                              {hymn.fileUrl && (
+                              {hymn?.fileUrl && (
                                 <a
                                   href={hymn.fileUrl}
                                   target="_blank"
