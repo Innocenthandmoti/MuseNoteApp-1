@@ -170,7 +170,6 @@ function PlannerContent() {
   });
 
   const [customInputs, setCustomInputs] = useState<Record<string, string>>({});
-  // Track which Mass part dropdown is currently open
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>(
     {},
   );

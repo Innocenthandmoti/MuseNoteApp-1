@@ -17,6 +17,14 @@ interface MediaItem {
   fileUrl?: string;
 }
 
+interface UploadRequest {
+  id: string;
+  user_id: string;
+  user_email: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+}
+
 // 🔒 Reads admin emails dynamically from .env.local
 const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .split(",")
@@ -38,6 +46,7 @@ export default function AdminPage() {
 
   // Moderation Panel States
   const [songs, setSongs] = useState<MediaItem[]>([]);
+  const [uploadRequests, setUploadRequests] = useState<UploadRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Editing State
@@ -71,7 +80,7 @@ export default function AdminPage() {
         if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
           setAdminUser(session.user);
           setAuthorized(true);
-          fetchSongs();
+          fetchData();
         } else {
           setLoginError("This account is not authorized as an administrator.");
           await supabase.auth.signOut();
@@ -101,7 +110,7 @@ export default function AdminPage() {
       if (userEmail && ADMIN_EMAILS.includes(userEmail)) {
         setAdminUser(data.user);
         setAuthorized(true);
-        fetchSongs();
+        fetchData();
       } else {
         setLoginError(
           "Access Denied: This email is not authorized as an administrator.",
@@ -115,8 +124,13 @@ export default function AdminPage() {
     }
   };
 
-  const fetchSongs = async () => {
+  const fetchData = async () => {
     setLoading(true);
+    await Promise.all([fetchSongs(), fetchUploadRequests()]);
+    setLoading(false);
+  };
+
+  const fetchSongs = async () => {
     const { data, error } = await supabase
       .from("MediaItem")
       .select("*")
@@ -127,7 +141,35 @@ export default function AdminPage() {
     } else {
       setSongs(data || []);
     }
-    setLoading(false);
+  };
+
+  const fetchUploadRequests = async () => {
+    const { data, error } = await supabase
+      .from("upload_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching upload requests:", error);
+    } else {
+      setUploadRequests(data || []);
+    }
+  };
+
+  const handleUpdateContributorStatus = async (
+    requestId: string,
+    newStatus: "approved" | "rejected",
+  ) => {
+    const { error } = await supabase
+      .from("upload_requests")
+      .update({ status: newStatus })
+      .eq("id", requestId);
+
+    if (error) {
+      alert(`Error updating contributor request: ${error.message}`);
+    } else {
+      fetchUploadRequests();
+    }
   };
 
   const handleOpenEdit = (song: MediaItem) => {
@@ -357,16 +399,16 @@ export default function AdminPage() {
     );
   }
 
-  // 3. Authorized View (Original Moderation Panel)
+  // 3. Authorized View (Original Moderation Panel + New Contributor Request Queue)
   return (
-    <div className="max-w-6xl mx-auto py-12 px-6 font-sans">
-      <div className="border-b border-amber-900/20 pb-4 mb-8 flex justify-between items-end">
+    <div className="max-w-6xl mx-auto py-12 px-6 font-sans space-y-12">
+      <div className="border-b border-amber-900/20 pb-4 flex justify-between items-end">
         <div>
           <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
             Administrative Control Panel
           </span>
           <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
-            Score Moderation & Management
+            Score & Contributor Moderation
           </h1>
         </div>
         <div className="flex items-center gap-4">
@@ -390,121 +432,225 @@ export default function AdminPage() {
         <div className="flex justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-900 border-t-transparent"></div>
         </div>
-      ) : songs.length === 0 ? (
-        <div className="bg-white border border-stone-200 rounded-lg p-12 text-center text-stone-500 italic">
-          No compositions found in the database.
-        </div>
       ) : (
-        <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
-                <th className="p-4">Title & Composer</th>
-                <th className="p-4">Season & Role</th>
-                <th className="p-4">Media Links & Score</th>
-                <th className="p-4">Status</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-100 text-sm">
-              {songs.map((song) => (
-                <tr key={song.id} className="hover:bg-stone-50/50 transition">
-                  <td className="p-4">
-                    <p className="font-bold text-stone-900 font-[family-name:var(--font-cinzel)]">
-                      {song.title}
-                    </p>
-                    <p className="text-xs text-stone-500 italic">
-                      By {song.composer || "Unknown"}
-                    </p>
-                  </td>
-                  <td className="p-4">
-                    <p className="text-xs font-semibold text-amber-900">
-                      {song.season || "Ordinary Time"}
-                    </p>
-                    <p className="text-xs text-stone-600 bg-amber-50 inline-block px-2 py-0.5 rounded border border-amber-200/60 mt-1">
-                      Role: {song.role || "General"}
-                    </p>
-                  </td>
-                  <td className="p-4 text-xs space-y-1">
-                    {song.audioUrl ? (
-                      <a
-                        href={song.audioUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-amber-800 hover:underline block truncate max-w-xs"
+        <>
+          {/* Section 1: Contributor Upload Permission Requests */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+                Pending Contributor Access Requests (
+                {uploadRequests.filter((r) => r.status === "pending").length})
+              </h2>
+            </div>
+
+            {uploadRequests.length === 0 ? (
+              <div className="bg-white border border-stone-200 rounded-lg p-6 text-center text-stone-500 italic text-xs">
+                No contributor registration requests found.
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
+                      <th className="p-4">User Email</th>
+                      <th className="p-4">Request Date</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100 text-sm">
+                    {uploadRequests.map((req) => (
+                      <tr
+                        key={req.id}
+                        className="hover:bg-stone-50/50 transition"
                       >
-                        🎵 Audio Link Attached
-                      </a>
-                    ) : (
-                      <span className="text-stone-400 block">No Audio</span>
-                    )}
-                    {song.videoUrl ? (
-                      <a
-                        href={song.videoUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-amber-800 hover:underline block truncate max-w-xs"
+                        <td className="p-4 font-bold text-stone-900">
+                          {req.user_email}
+                        </td>
+                        <td className="p-4 text-xs text-stone-500">
+                          {new Date(req.created_at).toLocaleDateString()}{" "}
+                          {new Date(req.created_at).toLocaleTimeString()}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                              req.status === "approved"
+                                ? "bg-green-100 text-green-800 border border-green-200"
+                                : req.status === "rejected"
+                                  ? "bg-red-100 text-red-800 border border-red-200"
+                                  : "bg-amber-100 text-amber-800 border border-amber-200"
+                            }`}
+                          >
+                            {req.status}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          {req.status !== "approved" && (
+                            <button
+                              onClick={() =>
+                                handleUpdateContributorStatus(
+                                  req.id,
+                                  "approved",
+                                )
+                              }
+                              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                            >
+                              Approve Access
+                            </button>
+                          )}
+                          {req.status !== "rejected" && (
+                            <button
+                              onClick={() =>
+                                handleUpdateContributorStatus(
+                                  req.id,
+                                  "rejected",
+                                )
+                              }
+                              className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Original Score Moderation Queue */}
+          <div className="space-y-4 pt-4">
+            <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+              Score Moderation Queue ({songs.length})
+            </h2>
+
+            {songs.length === 0 ? (
+              <div className="bg-white border border-stone-200 rounded-lg p-12 text-center text-stone-500 italic">
+                No compositions found in the database.
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
+                      <th className="p-4">Title & Composer</th>
+                      <th className="p-4">Season & Role</th>
+                      <th className="p-4">Media Links & Score</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100 text-sm">
+                    {songs.map((song) => (
+                      <tr
+                        key={song.id}
+                        className="hover:bg-stone-50/50 transition"
                       >
-                        🎬 Video Link Attached
-                      </a>
-                    ) : (
-                      <span className="text-stone-400 block">No Video</span>
-                    )}
-                    {song.fileUrl ? (
-                      <a
-                        href={song.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-stone-700 font-bold hover:underline block"
-                      >
-                        📄 View PDF Score ↗
-                      </a>
-                    ) : (
-                      <span className="text-stone-400 block">No PDF</span>
-                    )}
-                  </td>
-                  <td className="p-4">
-                    <span
-                      className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
-                        song.isApproved
-                          ? "bg-green-100 text-green-800 border border-green-200"
-                          : "bg-amber-100 text-amber-800 border border-amber-200"
-                      }`}
-                    >
-                      {song.isApproved ? "Approved" : "Pending"}
-                    </span>
-                  </td>
-                  <td className="p-4 text-right space-x-2">
-                    <button
-                      onClick={() => handleOpenEdit(song)}
-                      className="bg-stone-100 hover:bg-stone-200 text-stone-800 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleToggleApproval(song.id, song.isApproved)
-                      }
-                      className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${
-                        song.isApproved
-                          ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
-                          : "bg-green-700 text-white hover:bg-green-800"
-                      }`}
-                    >
-                      {song.isApproved ? "Unapprove" : "Approve"}
-                    </button>
-                    <button
-                      onClick={() => handleDelete(song.id)}
-                      className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                        <td className="p-4">
+                          <p className="font-bold text-stone-900 font-[family-name:var(--font-cinzel)]">
+                            {song.title}
+                          </p>
+                          <p className="text-xs text-stone-500 italic">
+                            By {song.composer || "Unknown"}
+                          </p>
+                        </td>
+                        <td className="p-4">
+                          <p className="text-xs font-semibold text-amber-900">
+                            {song.season || "Ordinary Time"}
+                          </p>
+                          <p className="text-xs text-stone-600 bg-amber-50 inline-block px-2 py-0.5 rounded border border-amber-200/60 mt-1">
+                            Role: {song.role || "General"}
+                          </p>
+                        </td>
+                        <td className="p-4 text-xs space-y-1">
+                          {song.audioUrl ? (
+                            <a
+                              href={song.audioUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-800 hover:underline block truncate max-w-xs"
+                            >
+                              🎵 Audio Link Attached
+                            </a>
+                          ) : (
+                            <span className="text-stone-400 block">
+                              No Audio
+                            </span>
+                          )}
+                          {song.videoUrl ? (
+                            <a
+                              href={song.videoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-amber-800 hover:underline block truncate max-w-xs"
+                            >
+                              🎬 Video Link Attached
+                            </a>
+                          ) : (
+                            <span className="text-stone-400 block">
+                              No Video
+                            </span>
+                          )}
+                          {song.fileUrl ? (
+                            <a
+                              href={song.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-stone-700 font-bold hover:underline block"
+                            >
+                              📄 View PDF Score ↗
+                            </a>
+                          ) : (
+                            <span className="text-stone-400 block">No PDF</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                              song.isApproved
+                                ? "bg-green-100 text-green-800 border border-green-200"
+                                : "bg-amber-100 text-amber-800 border border-amber-200"
+                            }`}
+                          >
+                            {song.isApproved ? "Approved" : "Pending"}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <button
+                            onClick={() => handleOpenEdit(song)}
+                            className="bg-stone-100 hover:bg-stone-200 text-stone-800 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleToggleApproval(song.id, song.isApproved)
+                            }
+                            className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${
+                              song.isApproved
+                                ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
+                                : "bg-green-700 text-white hover:bg-green-800"
+                            }`}
+                          >
+                            {song.isApproved ? "Unapprove" : "Approve"}
+                          </button>
+                          <button
+                            onClick={() => handleDelete(song.id)}
+                            className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {/* Edit Modal */}
