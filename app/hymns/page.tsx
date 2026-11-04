@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import MediaEmbeddedPlayer from "@/components/MediaEmbeddedPlayer";
 
 interface Song {
   id: string;
@@ -156,10 +157,13 @@ export default function HymnsCatalogPage() {
                     </span>
                   </p>
 
+                  {/* 🎵 🎬 INLINE MEDIA PLAYER (Plays directly inside MuseNote) */}
                   {(song.audioUrl || song.videoUrl) && (
-                    <div className="flex gap-2 text-[11px] text-amber-900 font-medium pt-1">
-                      {song.audioUrl && <span>🎵 Audio</span>}
-                      {song.videoUrl && <span>🎬 Video</span>}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <MediaEmbeddedPlayer
+                        audioUrl={song.audioUrl}
+                        videoUrl={song.videoUrl}
+                      />
                     </div>
                   )}
                 </div>
