@@ -31,8 +31,6 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
-console.log("Admin Emails Loaded:", ADMIN_EMAILS);
-
 export default function AdminPage() {
   // Authentication & Gatekeeper States
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -311,7 +309,7 @@ export default function AdminPage() {
   // 1. Loading state while verifying credentials
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center font-[family-name:var(--font-cinzel)] text-amber-900">
+      <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center font-[family-name:var(--font-cinzel)] text-amber-900 p-4 text-center text-sm">
         Verifying administrator credentials...
       </div>
     );
@@ -320,13 +318,13 @@ export default function AdminPage() {
   // 2. Login Gate if not authorized
   if (!authorized) {
     return (
-      <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans flex items-center justify-center p-6">
-        <div className="max-w-md w-full bg-white rounded-xl border border-amber-900/20 p-8 shadow-xs space-y-6">
+      <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans flex items-center justify-center p-4 sm:p-6">
+        <div className="max-w-md w-full bg-white rounded-xl border border-amber-900/20 p-6 sm:p-8 shadow-xs space-y-6">
           <div className="text-center space-y-2">
-            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
+            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60 inline-block">
               Restricted Area
             </span>
-            <h1 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
+            <h1 className="text-xl sm:text-2xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
               Administrator Sign In
             </h1>
             <p className="text-xs text-stone-600">
@@ -336,7 +334,7 @@ export default function AdminPage() {
           </div>
 
           {loginError && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded leading-relaxed">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-3 rounded leading-relaxed break-words">
               {loginError}
             </div>
           )}
@@ -352,7 +350,7 @@ export default function AdminPage() {
                 value={loginEmail}
                 onChange={(e) => setLoginEmail(e.target.value)}
                 placeholder="admin@example.com"
-                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-900"
               />
             </div>
 
@@ -367,7 +365,7 @@ export default function AdminPage() {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 pr-10 text-sm text-stone-900"
+                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 pr-12 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-amber-900"
                 />
                 <button
                   type="button"
@@ -391,7 +389,7 @@ export default function AdminPage() {
           <div className="text-center pt-2 border-t border-stone-100">
             <a
               href="/"
-              className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold"
+              className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold inline-block py-1"
             >
               ← Return to Main Application
             </a>
@@ -401,21 +399,22 @@ export default function AdminPage() {
     );
   }
 
-  // 3. Authorized View (Original Moderation Panel + New Contributor Request Queue)
+  // 3. Authorized View (Fully Responsive Layout)
   return (
-    <div className="max-w-6xl mx-auto py-12 px-6 font-sans space-y-12">
-      <div className="border-b border-amber-900/20 pb-4 flex justify-between items-end">
+    <div className="max-w-6xl mx-auto py-6 sm:py-12 px-4 sm:px-6 font-sans space-y-8 sm:space-y-12">
+      {/* Header Container */}
+      <div className="border-b border-amber-900/20 pb-4 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
         <div>
-          <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
+          <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60 inline-block">
             Administrative Control Panel
           </span>
-          <h1 className="text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
             Score & Contributor Moderation
           </h1>
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-stone-600 hidden sm:inline">
-            Logged in as:{" "}
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          <span className="text-xs text-stone-600 truncate max-w-[200px] sm:max-w-xs">
+            Logged in:{" "}
             <strong className="text-stone-900">{adminUser?.email}</strong>
           </span>
           <button
@@ -423,7 +422,7 @@ export default function AdminPage() {
               await supabase.auth.signOut();
               setAuthorized(false);
             }}
-            className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer bg-amber-50 px-3 py-2 rounded border border-amber-200"
+            className="text-xs font-[family-name:var(--font-cinzel)] text-amber-900 hover:underline font-semibold cursor-pointer bg-amber-50 px-3 py-1.5 rounded border border-amber-200"
           >
             Sign Out
           </button>
@@ -438,12 +437,10 @@ export default function AdminPage() {
         <>
           {/* Section 1: Contributor Upload Permission Requests */}
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
-                Pending Contributor Access Requests (
-                {uploadRequests.filter((r) => r.status === "pending").length})
-              </h2>
-            </div>
+            <h2 className="text-lg sm:text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+              Pending Contributor Access Requests (
+              {uploadRequests.filter((r) => r.status === "pending").length})
+            </h2>
 
             {uploadRequests.length === 0 ? (
               <div className="bg-white border border-stone-200 rounded-lg p-6 text-center text-stone-500 italic text-xs">
@@ -451,31 +448,34 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[550px]">
                   <thead>
                     <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
-                      <th className="p-4">User Email</th>
-                      <th className="p-4">Request Date</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Actions</th>
+                      <th className="p-3 sm:p-4">User Email</th>
+                      <th className="p-3 sm:p-4">Request Date</th>
+                      <th className="p-3 sm:p-4">Status</th>
+                      <th className="p-3 sm:p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-100 text-sm">
+                  <tbody className="divide-y divide-stone-100 text-xs sm:text-sm">
                     {uploadRequests.map((req) => (
                       <tr
                         key={req.id}
                         className="hover:bg-stone-50/50 transition"
                       >
-                        <td className="p-4 font-bold text-stone-900">
+                        <td className="p-3 sm:p-4 font-bold text-stone-900 break-all">
                           {req.user_email}
                         </td>
-                        <td className="p-4 text-xs text-stone-500">
+                        <td className="p-3 sm:p-4 text-xs text-stone-500 whitespace-nowrap">
                           {new Date(req.created_at).toLocaleDateString()}{" "}
-                          {new Date(req.created_at).toLocaleTimeString()}
+                          {new Date(req.created_at).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </td>
-                        <td className="p-4">
+                        <td className="p-3 sm:p-4">
                           <span
-                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider whitespace-nowrap ${
                               req.status === "approved"
                                 ? "bg-green-100 text-green-800 border border-green-200"
                                 : req.status === "rejected"
@@ -486,7 +486,7 @@ export default function AdminPage() {
                             {req.status}
                           </span>
                         </td>
-                        <td className="p-4 text-right space-x-2">
+                        <td className="p-3 sm:p-4 text-right whitespace-nowrap space-x-1 sm:space-x-2">
                           {req.status !== "approved" && (
                             <button
                               onClick={() =>
@@ -495,7 +495,7 @@ export default function AdminPage() {
                                   "approved",
                                 )
                               }
-                              className="bg-green-700 hover:bg-green-800 text-white px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                              className="bg-green-700 hover:bg-green-800 text-white px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-semibold cursor-pointer mb-1 sm:mb-0"
                             >
                               Approve Access
                             </button>
@@ -508,7 +508,7 @@ export default function AdminPage() {
                                   "rejected",
                                 )
                               }
-                              className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                              className="bg-red-50 text-red-700 hover:bg-red-100 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-semibold cursor-pointer"
                             >
                               Reject
                             </button>
@@ -524,33 +524,33 @@ export default function AdminPage() {
 
           {/* Section 2: Original Score Moderation Queue */}
           <div className="space-y-4 pt-4">
-            <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+            <h2 className="text-lg sm:text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
               Score Moderation Queue ({songs.length})
             </h2>
 
             {songs.length === 0 ? (
-              <div className="bg-white border border-stone-200 rounded-lg p-12 text-center text-stone-500 italic">
+              <div className="bg-white border border-stone-200 rounded-lg p-8 sm:p-12 text-center text-stone-500 italic text-xs sm:text-sm">
                 No compositions found in the database.
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full text-left border-collapse min-w-[650px]">
                   <thead>
                     <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
-                      <th className="p-4">Title & Composer</th>
-                      <th className="p-4">Season & Role</th>
-                      <th className="p-4">Media Links & Score</th>
-                      <th className="p-4">Status</th>
-                      <th className="p-4 text-right">Actions</th>
+                      <th className="p-3 sm:p-4">Title & Composer</th>
+                      <th className="p-3 sm:p-4">Season & Role</th>
+                      <th className="p-3 sm:p-4">Media Links & Score</th>
+                      <th className="p-3 sm:p-4">Status</th>
+                      <th className="p-3 sm:p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-stone-100 text-sm">
+                  <tbody className="divide-y divide-stone-100 text-xs sm:text-sm">
                     {songs.map((song) => (
                       <tr
                         key={song.id}
                         className="hover:bg-stone-50/50 transition"
                       >
-                        <td className="p-4">
+                        <td className="p-3 sm:p-4">
                           <p className="font-bold text-stone-900 font-[family-name:var(--font-cinzel)]">
                             {song.title}
                           </p>
@@ -558,7 +558,7 @@ export default function AdminPage() {
                             By {song.composer || "Unknown"}
                           </p>
                         </td>
-                        <td className="p-4">
+                        <td className="p-3 sm:p-4 whitespace-nowrap">
                           <p className="text-xs font-semibold text-amber-900">
                             {song.season || "Ordinary Time"}
                           </p>
@@ -566,13 +566,13 @@ export default function AdminPage() {
                             Role: {song.role || "General"}
                           </p>
                         </td>
-                        <td className="p-4 text-xs space-y-1">
+                        <td className="p-3 sm:p-4 text-xs space-y-1">
                           {song.audioUrl ? (
                             <a
                               href={song.audioUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-amber-800 hover:underline block truncate max-w-xs"
+                              className="text-amber-800 hover:underline block truncate max-w-[150px] sm:max-w-xs"
                             >
                               🎵 Audio Link Attached
                             </a>
@@ -586,7 +586,7 @@ export default function AdminPage() {
                               href={song.videoUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-amber-800 hover:underline block truncate max-w-xs"
+                              className="text-amber-800 hover:underline block truncate max-w-[150px] sm:max-w-xs"
                             >
                               🎬 Video Link Attached
                             </a>
@@ -608,9 +608,9 @@ export default function AdminPage() {
                             <span className="text-stone-400 block">No PDF</span>
                           )}
                         </td>
-                        <td className="p-4">
+                        <td className="p-3 sm:p-4">
                           <span
-                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                            className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase tracking-wider whitespace-nowrap ${
                               song.isApproved
                                 ? "bg-green-100 text-green-800 border border-green-200"
                                 : "bg-amber-100 text-amber-800 border border-amber-200"
@@ -619,10 +619,10 @@ export default function AdminPage() {
                             {song.isApproved ? "Approved" : "Pending"}
                           </span>
                         </td>
-                        <td className="p-4 text-right space-x-2">
+                        <td className="p-3 sm:p-4 text-right whitespace-nowrap space-x-1 sm:space-x-2">
                           <button
                             onClick={() => handleOpenEdit(song)}
-                            className="bg-stone-100 hover:bg-stone-200 text-stone-800 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                            className="bg-stone-100 hover:bg-stone-200 text-stone-800 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-semibold cursor-pointer"
                           >
                             Edit
                           </button>
@@ -630,7 +630,7 @@ export default function AdminPage() {
                             onClick={() =>
                               handleToggleApproval(song.id, song.isApproved)
                             }
-                            className={`px-3 py-1.5 rounded text-xs font-semibold cursor-pointer ${
+                            className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-semibold cursor-pointer ${
                               song.isApproved
                                 ? "bg-amber-100 text-amber-900 hover:bg-amber-200"
                                 : "bg-green-700 text-white hover:bg-green-800"
@@ -640,7 +640,7 @@ export default function AdminPage() {
                           </button>
                           <button
                             onClick={() => handleDelete(song.id)}
-                            className="bg-red-50 text-red-700 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                            className="bg-red-50 text-red-700 hover:bg-red-100 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-xs font-semibold cursor-pointer"
                           >
                             Delete
                           </button>
@@ -655,17 +655,17 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* Edit Modal */}
+      {/* Edit Composition Modal Dialog */}
       {editingSong && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-xl w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto space-y-6 shadow-xl border border-amber-900/20">
-            <div className="flex justify-between items-center border-b border-amber-900/15 pb-4">
-              <h2 className="text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-3 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-xl w-full p-4 sm:p-8 max-h-[90vh] overflow-y-auto space-y-4 sm:space-y-6 shadow-xl border border-amber-900/20">
+            <div className="flex justify-between items-center border-b border-amber-900/15 pb-3">
+              <h2 className="text-lg sm:text-xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900">
                 Edit Sacred Composition
               </h2>
               <button
                 onClick={() => setEditingSong(null)}
-                className="text-stone-400 hover:text-stone-700 text-lg font-bold cursor-pointer"
+                className="text-stone-400 hover:text-stone-700 text-lg font-bold cursor-pointer p-1"
               >
                 ✕
               </button>
@@ -681,7 +681,7 @@ export default function AdminPage() {
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                 />
               </div>
 
@@ -693,7 +693,7 @@ export default function AdminPage() {
                   type="text"
                   value={composer}
                   onChange={(e) => setComposer(e.target.value)}
-                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                 />
               </div>
 
@@ -705,7 +705,7 @@ export default function AdminPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   >
                     <option value="HYMN">Hymn</option>
                     <option value="CHANT">Gregorian Chant</option>
@@ -722,7 +722,7 @@ export default function AdminPage() {
                   <select
                     value={season}
                     onChange={(e) => setSeason(e.target.value)}
-                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   >
                     <option value="Ordinary Time">Ordinary Time</option>
                     <option value="Advent">Advent</option>
@@ -735,7 +735,6 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* Liturgical Role Selection */}
               <div>
                 <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
                   Liturgical Role / Part of Mass
@@ -743,7 +742,7 @@ export default function AdminPage() {
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                 >
                   <option value="Entrance">Entrance Hymn / Introit</option>
                   <option value="Kyrie">Kyrie (Lord Have Mercy)</option>
@@ -752,29 +751,19 @@ export default function AdminPage() {
                   <option value="Gospel Acclamation">
                     Gospel Acclamation / Alleluia
                   </option>
-                  <option value="Credo">
-                    Credo (I Believe / Nicene-Apostles Creed)
-                  </option>
+                  <option value="Credo">Credo (I Believe)</option>
                   <option value="Prayer of the Faithful">
-                    Prayer of the Faithful (Universal Prayer)
+                    Prayer of the Faithful
                   </option>
-                  <option value="Offertory">
-                    Offertory / Presentation of Gifts
-                  </option>
+                  <option value="Offertory">Offertory / Presentation</option>
                   <option value="Sanctus">Sanctus (Holy, Holy, Holy)</option>
-                  <option value="Mystery of Faith">
-                    Mystery of Faith / Memorial Acclamation
-                  </option>
+                  <option value="Mystery of Faith">Mystery of Faith</option>
                   <option value="Pater Noster">
                     Pater Noster (Our Father)
                   </option>
                   <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
-                  <option value="Communion">
-                    Communion Processional / Hymn
-                  </option>
-                  <option value="Thanksgiving">
-                    Post-Communion / Thanksgiving
-                  </option>
+                  <option value="Communion">Communion Processional</option>
+                  <option value="Thanksgiving">Thanksgiving</option>
                   <option value="Recessional">Recessional / Dismissal</option>
                   <option value="Marian Antiphon">Marian Antiphon</option>
                   <option value="Benediction">Benediction / Adoration</option>
@@ -789,7 +778,7 @@ export default function AdminPage() {
                     placeholder="Specify part of Mass / liturgical role..."
                     value={customRole}
                     onChange={(e) => setCustomRole(e.target.value)}
-                    className="mt-2 w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                    className="mt-2 w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   />
                 )}
               </div>
@@ -797,94 +786,71 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                    Audio Link{" "}
-                    <span className="text-stone-400 font-normal lowercase">
-                      (optional)
-                    </span>
+                    Audio Link (Optional)
                   </label>
                   <input
                     type="url"
                     value={audioUrl}
                     onChange={(e) => setAudioUrl(e.target.value)}
-                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                    placeholder="https://..."
+                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   />
                 </div>
 
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                    Video Link{" "}
-                    <span className="text-stone-400 font-normal lowercase">
-                      (optional)
-                    </span>
+                    Video Link (Optional)
                   </label>
                   <input
                     type="url"
                     value={videoUrl}
                     onChange={(e) => setVideoUrl(e.target.value)}
-                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                    placeholder="https://youtube.com/..."
+                    className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   />
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                  Lyrics & Stanzas
+                  Replace PDF Score (Optional)
                 </label>
-                <textarea
-                  rows={4}
-                  value={lyrics}
-                  onChange={(e) => setLyrics(e.target.value)}
-                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-stone-700"
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="application/pdf"
+                  onChange={handleFileChange}
+                  className="w-full text-xs text-stone-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-900 file:text-amber-50 hover:file:bg-amber-950 cursor-pointer"
                 />
               </div>
 
-              {/* PDF File Upload */}
               <div>
                 <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                  Replace PDF Score Document{" "}
-                  <span className="text-stone-400 font-normal lowercase">
-                    (optional)
-                  </span>
+                  Song Lyrics
                 </label>
-                <div className="border-2 border-dashed border-amber-900/30 rounded-sm p-4 text-center bg-[#FDFBF7] hover:bg-amber-50/40 transition">
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="edit-pdf-upload"
-                  />
-                  <label
-                    htmlFor="edit-pdf-upload"
-                    className="cursor-pointer space-y-1 block"
-                  >
-                    <span className="text-xl block text-amber-800">📄</span>
-                    <span className="text-xs font-semibold text-stone-800 block">
-                      {fileName
-                        ? `New File: ${fileName}`
-                        : editingSong.fileUrl
-                          ? "Current PDF attached (click to replace)"
-                          : "Click to browse device for PDF score"}
-                    </span>
-                  </label>
-                </div>
+                <textarea
+                  rows={5}
+                  value={lyrics}
+                  onChange={(e) => setLyrics(e.target.value)}
+                  placeholder="Type or paste lyrics here..."
+                  className="w-full bg-[#FDFBF7] border border-stone-300 rounded p-3 text-xs text-stone-900 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-stone-700"
+                />
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-stone-100">
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setEditingSong(null)}
-                  className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-4 py-2 rounded text-xs font-semibold cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2 border border-stone-300 rounded text-xs font-semibold text-stone-700 hover:bg-stone-50 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-amber-900 hover:bg-amber-950 text-amber-50 px-6 py-2 rounded text-xs font-semibold cursor-pointer disabled:opacity-50"
+                  className="w-full sm:w-auto bg-amber-900 hover:bg-amber-950 text-amber-50 font-bold px-6 py-2 rounded text-xs uppercase font-[family-name:var(--font-cinzel)] cursor-pointer disabled:opacity-50 transition"
                 >
-                  {saving ? "Saving Changes..." : "Save Score Edits"}
+                  {saving ? "Saving Changes..." : "Save Composition"}
                 </button>
               </div>
             </form>
