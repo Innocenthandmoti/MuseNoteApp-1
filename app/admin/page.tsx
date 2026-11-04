@@ -31,6 +31,8 @@ const ADMIN_EMAILS = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || "")
   .map((e) => e.trim().toLowerCase())
   .filter(Boolean);
 
+console.log("Admin Emails Loaded:", ADMIN_EMAILS);
+
 export default function AdminPage() {
   // Authentication & Gatekeeper States
   const [checkingAuth, setCheckingAuth] = useState(true);
