@@ -173,7 +173,7 @@ export default function UploadPage() {
 
     setUploading(true);
     try {
-      // 🔎 1. Check if a song with the exact same Title AND Composer already exists
+      // 1. Check for duplicate Title + Composer
       const { data: existingMatch, error: checkError } = await supabase
         .from("MediaItem")
         .select("id")
@@ -185,25 +185,27 @@ export default function UploadPage() {
 
       if (existingMatch) {
         alert(
-          `⚠️ Duplicate Entry Prevented:\n\n"${title}" by "${composer || "Unknown"}" already exists in the catalog. Different composers are allowed, but the same composer cannot upload an identical title twice.`,
+          `⚠️ Duplicate Entry Prevented:\n\n"${title}" by "${composer || "Unknown"}" already exists in the catalog.`,
         );
         setUploading(false);
         return;
       }
 
-      // 2. Upload file to Supabase storage if duplicate check passes
-      const fileName = `${Date.now()}_${file.name}`;
+      // 🛠️ 2. Sanitize filename to remove spaces and special characters for Supabase Storage
+      const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      const storageFileName = `${Date.now()}_${cleanFileName}`;
+
       const { error: storageError } = await supabase.storage
         .from("scores")
-        .upload(fileName, file);
+        .upload(storageFileName, file);
 
       if (storageError) throw storageError;
 
       const { data: publicUrlData } = supabase.storage
         .from("scores")
-        .getPublicUrl(fileName);
+        .getPublicUrl(storageFileName);
 
-      // 3. Insert new record into database
+      // 3. Insert record into database
       const { error: dbError } = await supabase.from("MediaItem").insert({
         title: title.trim(),
         composer: composer.trim() || "Unknown",
@@ -214,7 +216,7 @@ export default function UploadPage() {
         videoUrl: videoUrl || null,
         fileUrl: publicUrlData.publicUrl,
         user_id: currentUser?.id || null,
-        isApproved: false, // Enters moderation queue
+        isApproved: false,
       });
 
       if (dbError) throw dbError;
