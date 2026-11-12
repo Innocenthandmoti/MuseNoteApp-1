@@ -171,27 +171,35 @@ export default function UploadPage() {
       return;
     }
 
+    // Clean up input fields thoroughly (removes extra spaces and normalizes text)
+    const cleanedTitle = title.trim().toLowerCase();
+    const cleanedComposer = (composer || "Unknown").trim().toLowerCase();
+
     setUploading(true);
     try {
-      // 1. Check for duplicate Title + Composer
-      const { data: existingMatch, error: checkError } = await supabase
+      // 🔎 Fetch existing items to do a strict normalized comparison
+      const { data: existingItems, error: checkError } = await supabase
         .from("MediaItem")
-        .select("id")
-        .ilike("title", title.trim())
-        .ilike("composer", composer.trim() || "Unknown")
-        .maybeSingle();
+        .select("title, composer");
 
       if (checkError) throw checkError;
 
-      if (existingMatch) {
+      // Check if any existing record matches both the normalized title and composer
+      const isDuplicate = existingItems?.some((item) => {
+        const dbTitle = (item.title || "").trim().toLowerCase();
+        const dbComposer = (item.composer || "Unknown").trim().toLowerCase();
+        return dbTitle === cleanedTitle && dbComposer === cleanedComposer;
+      });
+
+      if (isDuplicate) {
         alert(
-          `⚠️ Duplicate Entry Prevented:\n\n"${title}" by "${composer || "Unknown"}" already exists in the catalog.`,
+          `⚠️ Duplicate Entry Prevented:\n\n"${title.trim()}" by "${composer.trim() || "Unknown"}" already exists in the catalog!`,
         );
         setUploading(false);
         return;
       }
 
-      // 🛠️ 2. Sanitize filename to remove spaces and special characters for Supabase Storage
+      // 🛠️ Sanitize filename for Supabase Storage
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const storageFileName = `${Date.now()}_${cleanFileName}`;
 
@@ -205,7 +213,7 @@ export default function UploadPage() {
         .from("scores")
         .getPublicUrl(storageFileName);
 
-      // 3. Insert record into database
+      // Insert new record into database
       const { error: dbError } = await supabase.from("MediaItem").insert({
         title: title.trim(),
         composer: composer.trim() || "Unknown",
