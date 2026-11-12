@@ -164,7 +164,6 @@ export default function UploadPage() {
       setTitle(uploadedFile.name.replace(/\.[^/.]+$/, ""));
     }
   };
-
   const handleSaveToCatalog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !title) {
@@ -174,6 +173,25 @@ export default function UploadPage() {
 
     setUploading(true);
     try {
+      // 🔎 1. Check if a song with the exact same Title AND Composer already exists
+      const { data: existingMatch, error: checkError } = await supabase
+        .from("MediaItem")
+        .select("id")
+        .ilike("title", title.trim())
+        .ilike("composer", composer.trim() || "Unknown")
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingMatch) {
+        alert(
+          `⚠️ Duplicate Entry Prevented:\n\n"${title}" by "${composer || "Unknown"}" already exists in the catalog. Different composers are allowed, but the same composer cannot upload an identical title twice.`,
+        );
+        setUploading(false);
+        return;
+      }
+
+      // 2. Upload file to Supabase storage if duplicate check passes
       const fileName = `${Date.now()}_${file.name}`;
       const { error: storageError } = await supabase.storage
         .from("scores")
@@ -185,9 +203,10 @@ export default function UploadPage() {
         .from("scores")
         .getPublicUrl(fileName);
 
+      // 3. Insert new record into database
       const { error: dbError } = await supabase.from("MediaItem").insert({
-        title,
-        composer,
+        title: title.trim(),
+        composer: composer.trim() || "Unknown",
         role,
         season,
         lyrics,
@@ -216,7 +235,6 @@ export default function UploadPage() {
       setUploading(false);
     }
   };
-
   // Prevent server/client hydration mismatch
   if (!mounted || loadingAuth) {
     return (
