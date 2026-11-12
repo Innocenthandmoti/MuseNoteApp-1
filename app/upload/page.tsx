@@ -23,7 +23,7 @@ export default function UploadPage() {
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false); // ✨ Added for show/hide toggle
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
 
@@ -42,6 +42,9 @@ export default function UploadPage() {
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [uploading, setUploading] = useState(false);
+
+  // 🚨 UI State for Duplicate Warning Banner
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -164,42 +167,36 @@ export default function UploadPage() {
       setTitle(uploadedFile.name.replace(/\.[^/.]+$/, ""));
     }
   };
+
   const handleSaveToCatalog = async (e: React.FormEvent) => {
     e.preventDefault();
+    setDuplicateError(null); // Clear previous warning banner
+
     if (!file || !title) {
       alert("Please provide a PDF file and a song title.");
       return;
     }
 
-    // Clean up input fields thoroughly (removes extra spaces and normalizes text)
-    const cleanedTitle = title.trim().toLowerCase();
-    const cleanedComposer = (composer || "Unknown").trim().toLowerCase();
-
     setUploading(true);
     try {
-      // 🔎 Fetch existing items to do a strict normalized comparison
-      const { data: existingItems, error: checkError } = await supabase
+      // 🔎 1. Check if a song with the exact same Title AND Composer already exists
+      const { data: existingMatches, error: checkError } = await supabase
         .from("MediaItem")
-        .select("title, composer");
+        .select("id")
+        .ilike("title", title.trim())
+        .ilike("composer", composer.trim() || "Unknown");
 
       if (checkError) throw checkError;
 
-      // Check if any existing record matches both the normalized title and composer
-      const isDuplicate = existingItems?.some((item) => {
-        const dbTitle = (item.title || "").trim().toLowerCase();
-        const dbComposer = (item.composer || "Unknown").trim().toLowerCase();
-        return dbTitle === cleanedTitle && dbComposer === cleanedComposer;
-      });
-
-      if (isDuplicate) {
-        alert(
-          `⚠️ Duplicate Entry Prevented:\n\n"${title.trim()}" by "${composer.trim() || "Unknown"}" already exists in the catalog!`,
+      if (existingMatches && existingMatches.length > 0) {
+        setDuplicateError(
+          `⚠️ "${title.trim()}" by "${composer.trim() || "Unknown"}" already exists in the app catalog.`,
         );
         setUploading(false);
-        return;
+        return; // Stops upload and displays inline warning banner
       }
 
-      // 🛠️ Sanitize filename for Supabase Storage
+      // 🛠️ 2. Sanitize filename for Supabase Storage
       const cleanFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
       const storageFileName = `${Date.now()}_${cleanFileName}`;
 
@@ -213,7 +210,7 @@ export default function UploadPage() {
         .from("scores")
         .getPublicUrl(storageFileName);
 
-      // Insert new record into database
+      // 3. Insert new record into database
       const { error: dbError } = await supabase.from("MediaItem").insert({
         title: title.trim(),
         composer: composer.trim() || "Unknown",
@@ -245,6 +242,7 @@ export default function UploadPage() {
       setUploading(false);
     }
   };
+
   // Prevent server/client hydration mismatch
   if (!mounted || loadingAuth) {
     return (
@@ -254,7 +252,7 @@ export default function UploadPage() {
     );
   }
 
-  // 1. Unauthenticated Gate: User Sign In / Register Form specifically for Uploaders
+  // 1. Unauthenticated Gate
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-[#FDFBF7] text-stone-900 flex items-center justify-center p-6 font-sans">
@@ -356,7 +354,7 @@ export default function UploadPage() {
     );
   }
 
-  // 2. Contributor Registration Form (If logged in but status is "none")
+  // 2. Contributor Registration Form
   if (requestStatus === "none") {
     return (
       <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12 flex items-center justify-center">
@@ -480,7 +478,7 @@ export default function UploadPage() {
     );
   }
 
-  // 4. Approved View (Your Original Upload Form)
+  // 4. Approved View (Upload Form with Duplicate Warning Banner)
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-2xl mx-auto space-y-6 bg-white rounded-xl border border-amber-900/20 p-8 shadow-xs">
@@ -511,6 +509,20 @@ export default function UploadPage() {
             </button>
           </div>
         </div>
+
+        {/* 🚨 Duplicate Warning Banner */}
+        {duplicateError && (
+          <div className="bg-red-50 border-l-4 border-red-700 p-4 rounded-r-md text-red-800 text-sm flex items-center justify-between">
+            <span className="font-semibold">{duplicateError}</span>
+            <button
+              type="button"
+              onClick={() => setDuplicateError(null)}
+              className="text-red-700 hover:text-red-900 text-xs font-bold uppercase cursor-pointer"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSaveToCatalog} className="space-y-4">
           <div>
