@@ -37,7 +37,7 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [role, setRole] = useState("Entrance");
-  const [season, setSeason] = useState("Ordinary Time");
+  const [season, setSeason] = useState("Ordinary Time"); // 👈 Liturgical Season State
   const [lyrics, setLyrics] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -210,12 +210,12 @@ export default function UploadPage() {
         .from("scores")
         .getPublicUrl(storageFileName);
 
-      // 3. Insert new record into database
+      // 3. Insert new record into database (Including Season)
       const { error: dbError } = await supabase.from("MediaItem").insert({
         title: title.trim(),
         composer: composer.trim() || "Unknown",
         role,
-        season,
+        season, // 👈 Saved to database
         lyrics,
         audioUrl: audioUrl || null,
         videoUrl: videoUrl || null,
@@ -478,7 +478,7 @@ export default function UploadPage() {
     );
   }
 
-  // 4. Approved View (Upload Form with Duplicate Warning Banner)
+  // 4. Approved View (Upload Form with Duplicate Warning & Season Selector)
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-2xl mx-auto space-y-6 bg-white rounded-xl border border-amber-900/20 p-8 shadow-xs">
@@ -579,6 +579,8 @@ export default function UploadPage() {
                 <option value="Gloria">Gloria</option>
                 <option value="Responsorial Psalm">Responsorial Psalm</option>
                 <option value="Gospel Acclamation">Gospel Acclamation</option>
+                <option value="Alleluia">Alleluia</option>{" "}
+                {/* 👈 Added Alleluia */}
                 <option value="Credo">Credo</option>
                 <option value="Prayer of the Faithful">
                   Prayer of the Faithful
@@ -589,10 +591,33 @@ export default function UploadPage() {
                 <option value="Agnus Dei">Agnus Dei</option>
                 <option value="Communion">Communion</option>
                 <option value="Thanksgiving">Thanksgiving</option>
+                <option value="Marian">Marian</option> {/* 👈 Added Marian */}
                 <option value="Recessional">Recessional</option>
                 <option value="General">General</option>
               </select>
             </div>
+          </div>
+
+          {/* 🌟 Liturgical Season Selector */}
+          <div>
+            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+              Liturgical Season
+            </label>
+            <select
+              value={season}
+              onChange={(e) => setSeason(e.target.value)}
+              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+            >
+              <option value="Ordinary Time">Ordinary Time</option>
+              <option value="Advent">Advent</option>
+              <option value="Christmas">Christmas</option>
+              <option value="Lent">Lent</option>
+              <option value="Easter">Easter</option>
+              <option value="Triduum">Triduum</option>
+              <option value="General / All Seasons">
+                General / All Seasons
+              </option>
+            </select>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
