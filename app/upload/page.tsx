@@ -37,7 +37,8 @@ export default function UploadPage() {
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
   const [role, setRole] = useState("Entrance");
-  const [season, setSeason] = useState("Ordinary Time"); // 👈 Liturgical Season State
+  const [season, setSeason] = useState("Ordinary Time");
+  const [category, setCategory] = useState("Mass / Sunday Liturgy");
   const [lyrics, setLyrics] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -210,12 +211,13 @@ export default function UploadPage() {
         .from("scores")
         .getPublicUrl(storageFileName);
 
-      // 3. Insert new record into database (Including Season)
+      // 3. Insert new record into database (Including Season & Category)
       const { error: dbError } = await supabase.from("MediaItem").insert({
         title: title.trim(),
         composer: composer.trim() || "Unknown",
         role,
-        season, // 👈 Saved to database
+        season,
+        category,
         lyrics,
         audioUrl: audioUrl || null,
         videoUrl: videoUrl || null,
@@ -478,7 +480,7 @@ export default function UploadPage() {
     );
   }
 
-  // 4. Approved View (Upload Form with Duplicate Warning & Season Selector)
+  // 4. Approved View (Upload Form with Duplicate Warning, Season & Occasion Category)
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-2xl mx-auto space-y-6 bg-white rounded-xl border border-amber-900/20 p-8 shadow-xs">
@@ -579,8 +581,7 @@ export default function UploadPage() {
                 <option value="Gloria">Gloria</option>
                 <option value="Responsorial Psalm">Responsorial Psalm</option>
                 <option value="Gospel Acclamation">Gospel Acclamation</option>
-                <option value="Alleluia">Alleluia</option>{" "}
-                {/* 👈 Added Alleluia */}
+                <option value="Alleluia">Alleluia</option>
                 <option value="Credo">Credo</option>
                 <option value="Prayer of the Faithful">
                   Prayer of the Faithful
@@ -591,33 +592,69 @@ export default function UploadPage() {
                 <option value="Agnus Dei">Agnus Dei</option>
                 <option value="Communion">Communion</option>
                 <option value="Thanksgiving">Thanksgiving</option>
-                <option value="Marian">Marian</option> {/* 👈 Added Marian */}
+                <option value="Marian">Marian</option>
                 <option value="Recessional">Recessional</option>
                 <option value="General">General</option>
               </select>
             </div>
           </div>
 
-          {/* 🌟 Liturgical Season Selector */}
-          <div>
-            <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
-              Liturgical Season
-            </label>
-            <select
-              value={season}
-              onChange={(e) => setSeason(e.target.value)}
-              className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
-            >
-              <option value="Ordinary Time">Ordinary Time</option>
-              <option value="Advent">Advent</option>
-              <option value="Christmas">Christmas</option>
-              <option value="Lent">Lent</option>
-              <option value="Easter">Easter</option>
-              <option value="Triduum">Triduum</option>
-              <option value="General / All Seasons">
-                General / All Seasons
-              </option>
-            </select>
+          {/* 🌟 Liturgical Season & Occasion Category */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Liturgical Season
+              </label>
+              <select
+                value={season}
+                onChange={(e) => setSeason(e.target.value)}
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              >
+                <option value="Ordinary Time">Ordinary Time</option>
+                <option value="Advent">Advent</option>
+                <option value="Christmas">Christmas</option>
+                <option value="Lent">Lent</option>
+                <option value="Easter">Easter</option>
+                <option value="Triduum">Triduum</option>
+                <option value="General / All Seasons">
+                  General / All Seasons
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase font-bold text-stone-700 mb-1">
+                Occasion / Category
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900"
+              >
+                <option value="Mass / Sunday Liturgy">
+                  Mass / Sunday Liturgy
+                </option>
+                <option value="Burial / Funeral">
+                  Burial / Funeral (Requiem)
+                </option>
+                <option value="Wedding / Matrimony">Wedding / Matrimony</option>
+                <option value="Ordination / Priestly">
+                  Ordination / Priestly
+                </option>
+                <option value="First Communion / Confirmation">
+                  First Communion / Confirmation
+                </option>
+                <option value="Feast Day / Solemnity">
+                  Feast Day / Solemnity
+                </option>
+                <option value="Adoration / Benediction">
+                  Adoration / Benediction
+                </option>
+                <option value="Praise & Worship / Concert">
+                  Praise & Worship / Concert
+                </option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
