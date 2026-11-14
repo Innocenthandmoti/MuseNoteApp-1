@@ -10,6 +10,7 @@ interface Song {
   composer: string;
   category?: string;
   season?: string;
+  role?: string;
   audioUrl?: string;
   videoUrl?: string;
   fileUrl?: string;
@@ -20,6 +21,9 @@ export default function HymnsCatalogPage() {
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSeason, setSelectedSeason] = useState("All");
+  const [selectedRole, setSelectedRole] = useState("All");
 
   useEffect(() => {
     const fetchApprovedScores = async () => {
@@ -41,16 +45,57 @@ export default function HymnsCatalogPage() {
     fetchApprovedScores();
   }, []);
 
-  // Filter songs based on search query
+  // Extract unique options from loaded songs so dropdowns always match your database
+  const categories = [
+    "All",
+    ...Array.from(
+      new Set(songs.map((s) => s.category || "Mass / Sunday Liturgy")),
+    ),
+  ];
+  const seasons = [
+    "All",
+    ...Array.from(new Set(songs.map((s) => s.season || "Ordinary Time"))),
+  ];
+  const roles = [
+    "All",
+    ...Array.from(new Set(songs.map((s) => s.role || "General"))),
+  ];
+
+  // Filter songs based on search query + Category, Season, and Role dropdowns
   const filteredSongs = songs.filter((song) => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       song.title?.toLowerCase().includes(query) ||
       song.composer?.toLowerCase().includes(query) ||
       song.season?.toLowerCase().includes(query) ||
-      song.category?.toLowerCase().includes(query)
-    );
+      song.category?.toLowerCase().includes(query) ||
+      song.role?.toLowerCase().includes(query);
+
+    const songCategory = song.category || "Mass / Sunday Liturgy";
+    const songSeason = song.season || "Ordinary Time";
+    const songRole = song.role || "General";
+
+    const matchesCategory =
+      selectedCategory === "All" || songCategory === selectedCategory;
+    const matchesSeason =
+      selectedSeason === "All" || songSeason === selectedSeason;
+    const matchesRole = selectedRole === "All" || songRole === selectedRole;
+
+    return matchesSearch && matchesCategory && matchesSeason && matchesRole;
   });
+
+  const hasActiveFilters =
+    searchQuery !== "" ||
+    selectedCategory !== "All" ||
+    selectedSeason !== "All" ||
+    selectedRole !== "All";
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setSelectedCategory("All");
+    setSelectedSeason("All");
+    setSelectedRole("All");
+  };
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
@@ -78,42 +123,88 @@ export default function HymnsCatalogPage() {
           </button>
         </div>
 
-        {/* Clean Neutral Search Input Bar */}
-        <div className="max-w-xl">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-stone-700">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
+        {/* Search & Liturgical Metadata Filters */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-stone-700">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
                   strokeWidth="2"
-                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                />
-              </svg>
-            </span>
-            <input
-              type="text"
-              placeholder="Search by hymn title, composer, or season..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-stone-300 rounded px-4 py-2.5 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-stone-700 focus:border-stone-700 font-sans"
-            />
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                  />
+                </svg>
+              </span>
+              <input
+                type="text"
+                placeholder="Search title or composer..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-white border border-stone-300 rounded px-4 py-2.5 pl-10 text-sm text-stone-900 placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-amber-900 focus:border-amber-900 font-sans"
+              />
+            </div>
+
+            {/* Category / Occasion Filter */}
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              aria-label="Filter by Category"
+              className="w-full bg-white border border-stone-300 rounded px-3 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900 focus:border-amber-900 font-sans cursor-pointer"
+            >
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat === "All" ? "All Categories / Occasions" : cat}
+                </option>
+              ))}
+            </select>
+
+            {/* Liturgical Season Filter */}
+            <select
+              value={selectedSeason}
+              onChange={(e) => setSelectedSeason(e.target.value)}
+              aria-label="Filter by Season"
+              className="w-full bg-white border border-stone-300 rounded px-3 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900 focus:border-amber-900 font-sans cursor-pointer"
+            >
+              {seasons.map((season) => (
+                <option key={season} value={season}>
+                  {season === "All" ? "All Liturgical Seasons" : season}
+                </option>
+              ))}
+            </select>
+
+            {/* Liturgical Role Filter */}
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              aria-label="Filter by Role"
+              className="w-full bg-white border border-stone-300 rounded px-3 py-2.5 text-sm text-stone-900 focus:outline-hidden focus:ring-1 focus:ring-amber-900 focus:border-amber-900 font-sans cursor-pointer"
+            >
+              {roles.map((role) => (
+                <option key={role} value={role}>
+                  {role === "All" ? "All Liturgical Roles" : role}
+                </option>
+              ))}
+            </select>
           </div>
-          {searchQuery && (
-            <div className="mt-2 flex justify-between items-center text-xs text-stone-500 px-1">
-              <span>Found {filteredSongs.length} matching score(s)</span>
+
+          {hasActiveFilters && (
+            <div className="flex justify-between items-center text-xs text-stone-500 px-1">
+              <span>Showing {filteredSongs.length} matching score(s)</span>
               <button
-                onClick={() => setSearchQuery("")}
-                className="text-stone-700 hover:underline font-semibold cursor-pointer"
+                onClick={resetFilters}
+                className="text-amber-900 hover:underline font-semibold cursor-pointer"
               >
-                Clear Search
+                Reset All Filters
               </button>
             </div>
           )}
