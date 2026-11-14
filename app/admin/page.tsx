@@ -535,11 +535,11 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="bg-white rounded-lg border border-amber-900/20 shadow-xs overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[650px]">
+                <table className="w-full text-left border-collapse min-w-[700px]">
                   <thead>
                     <tr className="bg-amber-50/60 border-b border-amber-900/10 text-xs font-[family-name:var(--font-cinzel)] text-amber-900 uppercase">
                       <th className="p-3 sm:p-4">Title & Composer</th>
-                      <th className="p-3 sm:p-4">Season & Role</th>
+                      <th className="p-3 sm:p-4">Category, Season & Role</th>
                       <th className="p-3 sm:p-4">Media Links & Score</th>
                       <th className="p-3 sm:p-4">Status</th>
                       <th className="p-3 sm:p-4 text-right">Actions</th>
@@ -559,11 +559,14 @@ export default function AdminPage() {
                             By {song.composer || "Unknown"}
                           </p>
                         </td>
-                        <td className="p-3 sm:p-4 whitespace-nowrap">
-                          <p className="text-xs font-semibold text-amber-900">
-                            {song.season || "Ordinary Time"}
+                        <td className="p-3 sm:p-4 whitespace-nowrap space-y-1">
+                          <p className="text-[10px] font-bold uppercase bg-stone-100 text-stone-800 px-2 py-0.5 rounded inline-block border border-stone-200">
+                            {song.category || "Mass / Sunday Liturgy"}
                           </p>
-                          <p className="text-xs text-stone-600 bg-amber-50 inline-block px-2 py-0.5 rounded border border-amber-200/60 mt-1">
+                          <p className="text-xs font-semibold text-amber-900">
+                            Season: {song.season || "Ordinary Time"}
+                          </p>
+                          <p className="text-xs text-stone-600 bg-amber-50 inline-block px-2 py-0.5 rounded border border-amber-200/60">
                             Role: {song.role || "General"}
                           </p>
                         </td>

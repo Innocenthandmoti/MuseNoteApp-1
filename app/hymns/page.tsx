@@ -157,13 +157,26 @@ export default function HymnsCatalogPage() {
                     </span>
                   </p>
 
-                  {/* 🎵 🎬 INLINE MEDIA PLAYER (Plays directly inside MuseNote) */}
-                  {(song.audioUrl || song.videoUrl) && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <MediaEmbeddedPlayer
-                        audioUrl={song.audioUrl}
-                        videoUrl={song.videoUrl}
+                  {/* 📄 PDF First Page Preview (Replaces Video Display) */}
+                  {song.fileUrl && (
+                    <div className="w-full h-48 bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative">
+                      <iframe
+                        src={`${song.fileUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                        title={`${song.title} - Page 1`}
+                        className="w-full h-full pointer-events-none"
                       />
+                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition flex items-end p-2">
+                        <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold uppercase bg-white/95 text-stone-800 px-2 py-0.5 rounded shadow-xs border border-stone-200">
+                          Page 1 Preview
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 🎵 Keep Audio Player Only (If Audio Link Exists) */}
+                  {song.audioUrl && (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <MediaEmbeddedPlayer audioUrl={song.audioUrl} />
                     </div>
                   )}
                 </div>
