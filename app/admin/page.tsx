@@ -53,7 +53,7 @@ export default function AdminPage() {
   const [editingSong, setEditingSong] = useState<MediaItem | null>(null);
   const [title, setTitle] = useState("");
   const [composer, setComposer] = useState("");
-  const [category, setCategory] = useState("HYMN");
+  const [category, setCategory] = useState("Mass / Sunday Liturgy");
   const [season, setSeason] = useState("Ordinary Time");
   const [role, setRole] = useState("Entrance");
   const [customRole, setCustomRole] = useState("");
@@ -176,7 +176,7 @@ export default function AdminPage() {
     setEditingSong(song);
     setTitle(song.title || "");
     setComposer(song.composer || "");
-    setCategory(song.category || "HYMN");
+    setCategory(song.category || "Mass / Sunday Liturgy");
     setSeason(song.season || "Ordinary Time");
 
     const standardRoles = [
@@ -185,6 +185,7 @@ export default function AdminPage() {
       "Gloria",
       "Responsorial Psalm",
       "Gospel Acclamation",
+      "Alleluia",
       "Credo",
       "Prayer of the Faithful",
       "Offertory",
@@ -194,8 +195,8 @@ export default function AdminPage() {
       "Agnus Dei",
       "Communion",
       "Thanksgiving",
+      "Marian",
       "Recessional",
-      "Marian Antiphon",
       "Benediction",
       "General",
     ];
@@ -241,13 +242,13 @@ export default function AdminPage() {
         const filePath = `scores/${uniqueFileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from("media")
+          .from("scores")
           .upload(filePath, selectedFile);
 
         if (uploadError) throw uploadError;
 
         const { data: publicUrlData } = supabase.storage
-          .from("media")
+          .from("scores")
           .getPublicUrl(filePath);
 
         updatedFileUrl = publicUrlData.publicUrl;
@@ -700,18 +701,37 @@ export default function AdminPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                    Category
+                    Occasion / Category
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   >
-                    <option value="HYMN">Hymn</option>
-                    <option value="CHANT">Gregorian Chant</option>
-                    <option value="POLYPHONY">Sacred Polyphony</option>
-                    <option value="MASS_SETTING">Mass Setting</option>
-                    <option value="MOTET">Motet</option>
+                    <option value="Mass / Sunday Liturgy">
+                      Mass / Sunday Liturgy
+                    </option>
+                    <option value="Burial / Funeral">
+                      Burial / Funeral (Requiem)
+                    </option>
+                    <option value="Wedding / Matrimony">
+                      Wedding / Matrimony
+                    </option>
+                    <option value="Ordination / Priestly">
+                      Ordination / Priestly
+                    </option>
+                    <option value="First Communion / Confirmation">
+                      First Communion / Confirmation
+                    </option>
+                    <option value="Feast Day / Solemnity">
+                      Feast Day / Solemnity
+                    </option>
+                    <option value="Adoration / Benediction">
+                      Adoration / Benediction
+                    </option>
+                    <option value="Praise & Worship / Concert">
+                      Praise & Worship / Concert
+                    </option>
                   </select>
                 </div>
 
@@ -730,7 +750,9 @@ export default function AdminPage() {
                     <option value="Lent">Lent</option>
                     <option value="Triduum">Triduum</option>
                     <option value="Easter">Easter</option>
-                    <option value="Marian Feasts">Marian Feasts</option>
+                    <option value="General / All Seasons">
+                      General / All Seasons
+                    </option>
                   </select>
                 </div>
               </div>
@@ -748,9 +770,8 @@ export default function AdminPage() {
                   <option value="Kyrie">Kyrie (Lord Have Mercy)</option>
                   <option value="Gloria">Gloria (Glory to God)</option>
                   <option value="Responsorial Psalm">Responsorial Psalm</option>
-                  <option value="Gospel Acclamation">
-                    Gospel Acclamation / Alleluia
-                  </option>
+                  <option value="Gospel Acclamation">Gospel Acclamation</option>
+                  <option value="Alleluia">Alleluia</option>
                   <option value="Credo">Credo (I Believe)</option>
                   <option value="Prayer of the Faithful">
                     Prayer of the Faithful
@@ -764,23 +785,11 @@ export default function AdminPage() {
                   <option value="Agnus Dei">Agnus Dei (Lamb of God)</option>
                   <option value="Communion">Communion Processional</option>
                   <option value="Thanksgiving">Thanksgiving</option>
+                  <option value="Marian">Marian</option>
                   <option value="Recessional">Recessional / Dismissal</option>
-                  <option value="Marian Antiphon">Marian Antiphon</option>
                   <option value="Benediction">Benediction / Adoration</option>
                   <option value="General">General / Meditation</option>
-                  <option value="Other">Other (Specify below)</option>
                 </select>
-
-                {role === "Other" && (
-                  <input
-                    type="text"
-                    required
-                    placeholder="Specify part of Mass / liturgical role..."
-                    value={customRole}
-                    onChange={(e) => setCustomRole(e.target.value)}
-                    className="mt-2 w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
-                  />
-                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -796,7 +805,6 @@ export default function AdminPage() {
                     className="w-full bg-[#FDFBF7] border border-stone-300 rounded px-3 py-2 text-sm text-stone-900 focus:outline-none focus:ring-1 focus:ring-stone-700"
                   />
                 </div>
-
                 <div>
                   <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
                     Video Link (Optional)
@@ -817,40 +825,44 @@ export default function AdminPage() {
                 </label>
                 <input
                   type="file"
-                  ref={fileInputRef}
                   accept="application/pdf"
+                  ref={fileInputRef}
                   onChange={handleFileChange}
                   className="w-full text-xs text-stone-600 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-900 file:text-amber-50 hover:file:bg-amber-950 cursor-pointer"
                 />
+                {fileName && (
+                  <p className="text-xs text-emerald-700 mt-1">
+                    Selected new file: {fileName}
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-[family-name:var(--font-cinzel)] uppercase tracking-wider text-stone-700 font-bold mb-1">
-                  Song Lyrics
+                  Lyrics
                 </label>
                 <textarea
                   rows={5}
                   value={lyrics}
                   onChange={(e) => setLyrics(e.target.value)}
-                  placeholder="Type or paste lyrics here..."
                   className="w-full bg-[#FDFBF7] border border-stone-300 rounded p-3 text-xs text-stone-900 font-mono leading-relaxed focus:outline-none focus:ring-1 focus:ring-stone-700"
                 />
               </div>
 
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
+              <div className="flex justify-end gap-3 pt-3 border-t border-stone-200">
                 <button
                   type="button"
                   onClick={() => setEditingSong(null)}
-                  className="w-full sm:w-auto px-4 py-2 border border-stone-300 rounded text-xs font-semibold text-stone-700 hover:bg-stone-50 cursor-pointer"
+                  className="px-4 py-2 rounded border border-stone-300 text-xs font-bold uppercase cursor-pointer text-stone-700 hover:bg-stone-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="w-full sm:w-auto bg-amber-900 hover:bg-amber-950 text-amber-50 font-bold px-6 py-2 rounded text-xs uppercase font-[family-name:var(--font-cinzel)] cursor-pointer disabled:opacity-50 transition"
+                  className="bg-amber-900 hover:bg-amber-950 text-amber-50 px-6 py-2 rounded text-xs font-[family-name:var(--font-cinzel)] font-bold uppercase cursor-pointer disabled:opacity-50"
                 >
-                  {saving ? "Saving Changes..." : "Save Composition"}
+                  {saving ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>
