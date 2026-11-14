@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import MediaEmbeddedPlayer from "@/components/MediaEmbeddedPlayer";
 
 interface Song {
   id: string;
@@ -94,6 +93,7 @@ export default function HymnsCatalogPage() {
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  strokeWidth="2"
                   d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
                 />
               </svg>
@@ -134,49 +134,58 @@ export default function HymnsCatalogPage() {
               <div
                 key={song.id}
                 onClick={() => router.push(`/hymns/${song.id}`)}
-                className="bg-white rounded-lg border border-amber-900/20 p-6 shadow-xs hover:shadow-md hover:border-amber-800/40 transition cursor-pointer flex flex-col justify-between space-y-4 group"
+                className="bg-white rounded-xl border border-stone-200/80 p-5 shadow-xs hover:shadow-md hover:border-amber-900/40 transition cursor-pointer flex flex-col justify-between space-y-4 group"
               >
+                {/* Card Header & Metadata Badges */}
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded border border-amber-200">
-                      {song.category || "HYMN"}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded-sm border border-amber-200/60 uppercase">
+                      {song.category || "Mass / Sunday Liturgy"}
                     </span>
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold text-stone-600 bg-stone-100 px-2 py-0.5 rounded border border-stone-200">
+                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold text-stone-600 bg-stone-100 px-2.5 py-1 rounded-sm border border-stone-200 uppercase">
                       {song.season || "Ordinary Time"}
                     </span>
                   </div>
 
-                  <h3 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
-                    {song.title}
-                  </h3>
+                  <div>
+                    <h3 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
+                      {song.title}
+                    </h3>
+                    <p className="text-xs italic text-stone-600 font-[family-name:var(--font-cinzel)] mt-0.5">
+                      By{" "}
+                      <span className="font-semibold text-stone-800">
+                        {song.composer || "Unknown Composer"}
+                      </span>
+                    </p>
+                  </div>
 
-                  <p className="text-xs italic text-stone-600 font-[family-name:var(--font-cinzel)]">
-                    By{" "}
-                    <span className="font-semibold text-stone-800">
-                      {song.composer || "Unknown Composer"}
-                    </span>
-                  </p>
-
-                  {/* 📄 PDF First Page Preview */}
-                  {song.fileUrl && (
-                    <div className="w-full h-48 bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative">
+                  {/* 📄 PDF First Page Preview Frame */}
+                  {song.fileUrl ? (
+                    <div className="w-full h-40 bg-stone-50 rounded-lg overflow-hidden border border-stone-200/80 relative group/preview">
                       <iframe
                         src={`${song.fileUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
                         title={`${song.title} - Page 1`}
-                        className="w-full h-full pointer-events-none"
+                        className="w-full h-full pointer-events-none opacity-90 group-hover/preview:opacity-100 transition"
                       />
-                      <div className="absolute inset-0 bg-transparent group-hover:bg-black/5 transition flex items-end p-2">
-                        <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold uppercase bg-white/95 text-stone-800 px-2 py-0.5 rounded shadow-xs border border-stone-200">
-                          Page 1 Preview
+                      <div className="absolute inset-0 bg-transparent group-hover/preview:bg-black/5 transition flex items-end p-2">
+                        <span className="text-[9px] font-[family-name:var(--font-cinzel)] font-bold uppercase bg-white/95 text-stone-800 px-2 py-0.5 rounded shadow-xs border border-stone-200">
+                          Sheet Music Preview
                         </span>
                       </div>
                     </div>
+                  ) : (
+                    <div className="w-full h-40 bg-stone-50 rounded-lg flex items-center justify-center text-xs text-stone-400 italic border border-stone-200/80">
+                      No sheet music preview
+                    </div>
                   )}
+                </div>
 
-                  {/* 🎵🎬 Quick Audio & Video Action Buttons */}
+                {/* Card Footer Actions & Media Links */}
+                <div className="pt-3 border-t border-stone-100 space-y-3">
+                  {/* Quick Audio & Video Buttons (If available) */}
                   {(song.audioUrl || song.videoUrl) && (
                     <div
-                      className="flex items-center gap-2 pt-1"
+                      className="flex items-center gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {song.audioUrl && (
@@ -184,9 +193,9 @@ export default function HymnsCatalogPage() {
                           href={song.audioUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-center py-1.5 px-3 rounded text-xs font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1.5"
+                          className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-center py-1.5 px-2 rounded-md text-[11px] font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1"
                         >
-                          <span>🎵</span> Listen Audio
+                          <span>🎵</span> Audio
                         </a>
                       )}
                       {song.videoUrl && (
@@ -194,18 +203,20 @@ export default function HymnsCatalogPage() {
                           href={song.videoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 text-center py-1.5 px-3 rounded text-xs font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1.5"
+                          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 text-center py-1.5 px-2 rounded-md text-[11px] font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1"
                         >
-                          <span>🎬</span> Watch Video
+                          <span>🎬</span> Video
                         </a>
                       )}
                     </div>
                   )}
-                </div>
 
-                <div className="pt-3 border-t border-stone-100 flex justify-between items-center text-xs font-[family-name:var(--font-cinzel)] text-amber-900 font-bold">
-                  <span>View Details & Score</span>
-                  <span>→</span>
+                  <div className="flex justify-between items-center text-xs font-[family-name:var(--font-cinzel)] text-amber-900 font-bold pt-1">
+                    <span className="group-hover:underline">
+                      Inspect Full Score & Lyrics
+                    </span>
+                    <span>→</span>
+                  </div>
                 </div>
               </div>
             ))}

@@ -1,8 +1,9 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-cinzel: var(--font-cinzel);
-  --font-garamond: var(--font-garamond);
+  --font-cinzel: "Cinzel", serif;
+  --font-garamond: "EB Garamond", serif;
 }
 
 :root {
