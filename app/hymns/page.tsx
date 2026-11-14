@@ -157,7 +157,7 @@ export default function HymnsCatalogPage() {
                     </span>
                   </p>
 
-                  {/* 📄 PDF First Page Preview (Replaces Video Display) */}
+                  {/* 📄 PDF First Page Preview */}
                   {song.fileUrl && (
                     <div className="w-full h-48 bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative">
                       <iframe
@@ -173,10 +173,32 @@ export default function HymnsCatalogPage() {
                     </div>
                   )}
 
-                  {/* 🎵 Keep Audio Player Only (If Audio Link Exists) */}
-                  {song.audioUrl && (
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <MediaEmbeddedPlayer audioUrl={song.audioUrl} />
+                  {/* 🎵🎬 Quick Audio & Video Action Buttons */}
+                  {(song.audioUrl || song.videoUrl) && (
+                    <div
+                      className="flex items-center gap-2 pt-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {song.audioUrl && (
+                        <a
+                          href={song.audioUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 text-center py-1.5 px-3 rounded text-xs font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1.5"
+                        >
+                          <span>🎵</span> Listen Audio
+                        </a>
+                      )}
+                      {song.videoUrl && (
+                        <a
+                          href={song.videoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 text-center py-1.5 px-3 rounded text-xs font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1.5"
+                        >
+                          <span>🎬</span> Watch Video
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>
