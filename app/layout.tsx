@@ -46,6 +46,10 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  // 🔑 Google Search Console Verification (Replace YOUR_CODE_HERE with your code)
+  verification: {
+    google: "LTBfngLn2G0vIW-AttnV1d6ljMxdnH3NtwMOl42o4FA",
+  },
   // 📱 Open Graph for Social Sharing (Facebook, WhatsApp, LinkedIn)
   openGraph: {
     type: "website",
@@ -57,7 +61,7 @@ export const metadata: Metadata = {
     siteName: "MuseNote",
     images: [
       {
-        url: `${PRODUCTION_URL}/og-image.jpg`, // Make sure to add an og-image.jpg in your public folder later if desired
+        url: `${PRODUCTION_URL}/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: "MuseNote Sacred Liturgical Music Treasury",
