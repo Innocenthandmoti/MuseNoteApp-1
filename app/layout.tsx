@@ -1,10 +1,84 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Header, Footer } from "@/components/AppNavigation";
 import "./globals.css";
 
+// 🌍 Define your production domain for canonical URLs and absolute share images
+const PRODUCTION_URL = "https://muse-note-app-3.vercel.app";
+
 export const metadata: Metadata = {
-  title: "MuseNote | Sacred Liturgical Music Treasury",
-  description: "Classic sacred music planning and repository platform.",
+  metadataBase: new URL(PRODUCTION_URL),
+  title: {
+    default: "MuseNote | Sacred Liturgical Music Treasury & Hymn Repository",
+    template: "%s | MuseNote Sacred Music",
+  },
+  description:
+    "Discover, plan, and repository classic sacred music, Catholic hymns, choral scores, and liturgical chants. Listen to audio previews and browse sheet music.",
+  keywords: [
+    "sacred music",
+    "liturgical music",
+    "hymn repository",
+    "Catholic hymns",
+    "choral scores",
+    "sheet music platform",
+    "mass music planning",
+    "MuseNote",
+  ],
+  authors: [{ name: "MuseNote Team" }],
+  creator: "MuseNote",
+  publisher: "MuseNote Sacred Music",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  // 🔍 Canonical & Indexing Rules
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  // 📱 Open Graph for Social Sharing (Facebook, WhatsApp, LinkedIn)
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: PRODUCTION_URL,
+    title: "MuseNote | Sacred Liturgical Music Treasury",
+    description:
+      "Classic sacred music planning and repository platform for choirs, directors, and musicians.",
+    siteName: "MuseNote",
+    images: [
+      {
+        url: `${PRODUCTION_URL}/og-image.jpg`, // Make sure to add an og-image.jpg in your public folder later if desired
+        width: 1200,
+        height: 630,
+        alt: "MuseNote Sacred Liturgical Music Treasury",
+      },
+    ],
+  },
+  // 🐦 Twitter Card Metadata
+  twitter: {
+    card: "summary_large_image",
+    title: "MuseNote | Sacred Liturgical Music Treasury",
+    description:
+      "Classic sacred music planning and repository platform for choirs and musicians.",
+    images: [`${PRODUCTION_URL}/og-image.jpg`],
+  },
+};
+
+// 📱 Viewport settings for optimal mobile search scaling
+export const viewport: Viewport = {
+  themeColor: "#FDFBF7",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
