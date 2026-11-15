@@ -24,6 +24,7 @@ export default function HymnsCatalogPage() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedSeason, setSelectedSeason] = useState("All");
   const [selectedRole, setSelectedRole] = useState("All");
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchApprovedScores = async () => {
@@ -97,19 +98,48 @@ export default function HymnsCatalogPage() {
     setSelectedRole("All");
   };
 
+  const getEmbedUrl = (url: string) => {
+    const regExp =
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11
+      ? `https://www.youtube.com/embed/${match[2]}`
+      : null;
+  };
+
+  // Bulletproof global pause function: forces all other audio and video elements to pause
+  const handleMediaPlay = (currentId: string) => {
+    setPlayingId(currentId);
+
+    const allAudios = document.querySelectorAll("audio");
+    const allVideos = document.querySelectorAll("video");
+
+    allAudios.forEach((audioEl) => {
+      if (audioEl.id !== currentId) {
+        audioEl.pause();
+      }
+    });
+
+    allVideos.forEach((videoEl) => {
+      if (videoEl.id !== currentId) {
+        videoEl.pause();
+      }
+    });
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-stone-900 font-sans p-6 sm:p-12">
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Header */}
         <div className="border-b border-amber-900/20 pb-6 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
           <div>
-            <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
+            <span className="text-[10px] font-semibold tracking-widest text-amber-900 uppercase bg-amber-50 px-3 py-1 rounded-sm border border-amber-200/60">
               Sacred Repertoire Repository
             </span>
-            <h1 className="text-3xl sm:text-4xl font-[family-name:var(--font-cinzel)] font-bold text-stone-900 mt-2">
+            <h1 className="text-3xl sm:text-4xl font-bold text-stone-900 mt-2">
               Public Hymnary & Score Catalog
             </h1>
-            <p className="text-stone-600 text-sm italic mt-1 font-[family-name:var(--font-cinzel)]">
+            <p className="text-stone-600 text-sm italic mt-1">
               Browse approved compositions, listen to preview audio, or inspect
               score sheet music.
             </p>
@@ -117,7 +147,7 @@ export default function HymnsCatalogPage() {
 
           <button
             onClick={() => router.push("/upload")}
-            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs px-5 py-2.5 rounded font-[family-name:var(--font-cinzel)] font-semibold transition shadow-xs cursor-pointer"
+            className="bg-amber-900 hover:bg-amber-950 text-amber-50 text-xs px-5 py-2.5 rounded font-semibold transition shadow-xs cursor-pointer"
           >
             + Submit New Score
           </button>
@@ -230,19 +260,19 @@ export default function HymnsCatalogPage() {
                 {/* Card Header & Metadata Badges */}
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded-sm border border-amber-200/60 uppercase">
+                    <span className="text-[10px] font-bold bg-amber-50 text-amber-900 px-2.5 py-1 rounded-sm border border-amber-200/60 uppercase">
                       {song.category || "Mass / Sunday Liturgy"}
                     </span>
-                    <span className="text-[10px] font-[family-name:var(--font-cinzel)] font-semibold text-stone-600 bg-stone-100 px-2.5 py-1 rounded-sm border border-stone-200 uppercase">
+                    <span className="text-[10px] font-semibold text-stone-600 bg-stone-100 px-2.5 py-1 rounded-sm border border-stone-200 uppercase">
                       {song.season || "Ordinary Time"}
                     </span>
                   </div>
 
                   <div>
-                    <h3 className="text-lg font-[family-name:var(--font-cinzel)] font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
+                    <h3 className="text-lg font-bold text-stone-900 group-hover:text-amber-900 transition leading-snug">
                       {song.title}
                     </h3>
-                    <p className="text-xs italic text-stone-600 font-[family-name:var(--font-cinzel)] mt-0.5">
+                    <p className="text-xs italic text-stone-600 mt-0.5">
                       By{" "}
                       <span className="font-semibold text-stone-800">
                         {song.composer || "Unknown Composer"}
@@ -255,11 +285,11 @@ export default function HymnsCatalogPage() {
                     <div className="w-full h-40 bg-stone-50 rounded-lg overflow-hidden border border-stone-200/80 relative group/preview">
                       <iframe
                         src={`${song.fileUrl}#page=1&toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
-                        title={`${song.title} - Page 1`}
+                        title={`${song.title} Page 1`}
                         className="w-full h-full pointer-events-none opacity-90 group-hover/preview:opacity-100 transition"
                       />
                       <div className="absolute inset-0 bg-transparent group-hover/preview:bg-black/5 transition flex items-end p-2">
-                        <span className="text-[9px] font-[family-name:var(--font-cinzel)] font-bold uppercase bg-white/95 text-stone-800 px-2 py-0.5 rounded shadow-xs border border-stone-200">
+                        <span className="text-[9px] font-bold uppercase bg-white/95 text-stone-800 px-2 py-0.5 rounded shadow-xs border border-stone-200">
                           Sheet Music Preview
                         </span>
                       </div>
@@ -271,38 +301,63 @@ export default function HymnsCatalogPage() {
                   )}
                 </div>
 
-                {/* Card Footer Actions & Media Links */}
+                {/* Card Footer Actions & In-App Media Players */}
                 <div className="pt-3 border-t border-stone-100 space-y-3">
-                  {/* Quick Audio & Video Buttons (If available) */}
                   {(song.audioUrl || song.videoUrl) && (
                     <div
-                      className="flex items-center gap-2"
+                      className="space-y-2.5"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {/* Inline Audio Player */}
                       {song.audioUrl && (
-                        <a
-                          href={song.audioUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-center py-1.5 px-2 rounded-md text-[11px] font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1"
-                        >
-                          <span>🎵</span> Audio
-                        </a>
+                        <div className="bg-amber-50/60 p-2 rounded-md border border-amber-200/70">
+                          <span className="block text-[10px] font-semibold text-amber-900 uppercase tracking-wider mb-1">
+                            🎵 Audio Preview
+                          </span>
+                          <audio
+                            id={`audio-${song.id}`}
+                            controls
+                            preload="none"
+                            className="w-full h-8"
+                            onPlay={() => handleMediaPlay(`audio-${song.id}`)}
+                          >
+                            <source src={song.audioUrl} />
+                            Your browser does not support the audio element.
+                          </audio>
+                        </div>
                       )}
-                      {song.videoUrl && (
-                        <a
-                          href={song.videoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-1 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-200 text-center py-1.5 px-2 rounded-md text-[11px] font-[family-name:var(--font-cinzel)] font-bold transition flex items-center justify-center gap-1"
-                        >
-                          <span>🎬</span> Video
-                        </a>
-                      )}
+
+                      {/* Inline Video Player */}
+                      {song.videoUrl &&
+                        (() => {
+                          const embedUrl = getEmbedUrl(song.videoUrl);
+                          return embedUrl ? (
+                            <div className="aspect-video w-full rounded-md overflow-hidden bg-stone-900 border border-stone-200">
+                              <iframe
+                                src={embedUrl}
+                                title={`${song.title} Video`}
+                                className="w-full h-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                              />
+                            </div>
+                          ) : (
+                            <video
+                              id={`video-${song.id}`}
+                              controls
+                              preload="none"
+                              className="w-full rounded-md bg-black border border-stone-200 max-h-48"
+                              onPlay={() => handleMediaPlay(`video-${song.id}`)}
+                            >
+                              <source src={song.videoUrl} />
+                              Your browser does not support the video tag.
+                            </video>
+                          );
+                        })()}
                     </div>
                   )}
 
-                  <div className="flex justify-between items-center text-xs font-[family-name:var(--font-cinzel)] text-amber-900 font-bold pt-1">
+                  <div className="flex justify-between items-center text-xs text-amber-900 font-semibold pt-1">
                     <span className="group-hover:underline">
                       Inspect Full Score & Lyrics
                     </span>
